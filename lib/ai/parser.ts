@@ -10,11 +10,11 @@ import OpenAI from 'openai'
 import type { ProductQuery, ParsedProductList } from '@/types'
 
 const client = new OpenAI({
-  apiKey: process.env.NVIDIA_API_KEY ?? '',
-  baseURL: process.env.NVIDIA_BASE_URL ?? 'https://integrate.api.nvidia.com/v1',
+  apiKey: process.env.NVIDIA_API_KEY || 'dummy-build-key',
+  baseURL: process.env.NVIDIA_BASE_URL || 'https://integrate.api.nvidia.com/v1',
 })
 
-const MODEL = process.env.NVIDIA_MODEL ?? 'moonshotai/kimi-k3'
+const MODEL = process.env.NVIDIA_MODEL || 'moonshotai/kimi-k3'
 
 const SYSTEM_PROMPT = `You are a procurement assistant that extracts structured product items from freeform text.
 Return ONLY a valid JSON object:
