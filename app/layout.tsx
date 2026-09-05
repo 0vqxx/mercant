@@ -11,6 +11,14 @@ export const metadata: Metadata = {
   title: 'Mercant AI — Encuentra los mejores distribuidores. Automáticamente.',
   description:
     'Plataforma empresarial de abastecimiento y sourcing. Pega tu lista de compras, compara distribuidores en tiempo real y optimiza tu presupuesto sin intermediarios.',
+  icons: {
+    icon: [
+      { url: '/mercant-logo.png', sizes: 'any' },
+      { url: '/favicon.ico', sizes: 'any' },
+    ],
+    shortcut: '/mercant-logo.png',
+    apple: '/mercant-logo.png',
+  },
 }
 
 export default function RootLayout({

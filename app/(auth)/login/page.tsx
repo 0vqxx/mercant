@@ -171,7 +171,7 @@ export default function LoginPage() {
       <div className="w-full bg-white dark:bg-[#0c1018] rounded-[24px] sm:rounded-[28px] shadow-[0_20px_50px_-15px_rgba(0,0,0,0.08),0_0_1px_1px_rgba(0,0,0,0.04)] dark:shadow-2xl border border-slate-200/80 dark:border-[#1e2430] overflow-hidden grid grid-cols-1 md:grid-cols-12 transition-colors">
         
         {/* LEFT COLUMN: Visual Liquid Mesh Gradient Banner */}
-        <div className="md:col-span-5 relative bg-gradient-to-br from-[#1d4ed8] via-[#2563eb] to-[#3730e3] dark:bg-none dark:bg-gradient-to-br dark:from-[#0b0f19] dark:via-[#111827] dark:to-[#0b0f19] dark:border-r dark:border-[#1e2430] p-6 sm:p-8 flex flex-col justify-between text-white select-none min-h-[360px] md:min-h-[520px]">
+        <div className="md:col-span-5 relative bg-gradient-to-br from-[#1d4ed8] via-[#2563eb] to-[#3730e3] dark:bg-none dark:bg-gradient-to-br dark:from-[#0b0f19] dark:via-[#111827] dark:to-[#0b0f19] dark:border-r dark:border-[#1e2430] p-5 sm:p-6 md:p-8 flex flex-col justify-between text-white select-none min-h-0 md:min-h-[520px]">
           
           {/* Ambient Glows */}
           <div className="absolute inset-0 pointer-events-none overflow-hidden">

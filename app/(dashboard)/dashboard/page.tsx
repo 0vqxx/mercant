@@ -19,11 +19,14 @@ import { DashboardCharts } from '@/components/analytics/DashboardCharts'
 export const dynamic = 'force-dynamic'
 
 export default async function DashboardPage() {
-  const session = await getServerSession(authOptions)
-  const userId = session?.user?.id
+  let procurements: any[] = []
 
-  const procurements = userId
-    ? await prisma.procurement.findMany({
+  try {
+    const session = await getServerSession(authOptions)
+    const userId = session?.user?.id
+
+    if (userId) {
+      procurements = await prisma.procurement.findMany({
         where: { userId },
         include: {
           items: {
@@ -35,7 +38,11 @@ export default async function DashboardPage() {
         orderBy: { createdAt: 'desc' },
         take: 10,
       })
-    : []
+    }
+  } catch (err) {
+    console.error('[DashboardPage] Error retrieving procurements:', err)
+    procurements = []
+  }
 
   const totalProcurements = procurements.length
   let totalEstimatedSpend = 0
@@ -246,7 +253,7 @@ export default async function DashboardPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#e3e8ee] dark:divide-[#1e2430] text-[#3c4257] dark:text-[#c1c9d2]">
-                {procurements.map((proc) => (
+                {procurements.map((proc: any) => (
                   <tr
                     key={proc.id}
                     className="hover:bg-[#f8fafc] dark:hover:bg-[#121826]/70 transition-colors"

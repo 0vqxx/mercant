@@ -1,4 +1,4 @@
-﻿import React from 'react'
+import React from 'react'
 import Link from 'next/link'
 import { prisma } from '@/lib/db'
 import { getServerSession } from 'next-auth'
@@ -9,11 +9,14 @@ import { History, ArrowUpRight, RotateCw, ExternalLink } from 'lucide-react'
 export const dynamic = 'force-dynamic'
 
 export default async function HistoryPage() {
-  const session = await getServerSession(authOptions)
-  const userId = session?.user?.id
+  let completedProcurements: any[] = []
 
-  const completedProcurements = userId
-    ? await prisma.procurement.findMany({
+  try {
+    const session = await getServerSession(authOptions)
+    const userId = session?.user?.id
+
+    if (userId) {
+      completedProcurements = await prisma.procurement.findMany({
         where: { userId },
         include: {
           items: {
@@ -27,7 +30,11 @@ export default async function HistoryPage() {
         },
         orderBy: { createdAt: 'desc' },
       })
-    : []
+    }
+  } catch (err) {
+    console.error('[HistoryPage] Error retrieving procurements:', err)
+    completedProcurements = []
+  }
 
   return (
     <div className="space-y-6">
@@ -52,10 +59,10 @@ export default async function HistoryPage() {
             </p>
           </div>
         ) : (
-          completedProcurements.map((proc) => {
+          completedProcurements.map((proc: any) => {
             let totalEstimated = 0
-            for (const item of proc.items) {
-              if (item.offers[0]) totalEstimated += item.offers[0].totalPrice
+            for (const item of proc.items || []) {
+              if (item.offers?.[0]) totalEstimated += item.offers[0].totalPrice
             }
 
             return (
@@ -93,8 +100,8 @@ export default async function HistoryPage() {
 
                 {/* Items and final recommendation summary */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
-                  {proc.items.map((item) => {
-                    const topOffer = item.offers[0]
+                  {(proc.items || []).map((item: any) => {
+                    const topOffer = item.offers?.[0]
                     return (
                       <div
                         key={item.id}

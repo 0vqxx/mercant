@@ -24,10 +24,17 @@ import {
   LogOut,
   User as UserIcon,
   LifeBuoy,
+  X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-export function Sidebar() {
+interface SidebarProps {
+  isOpen?: boolean
+  onClose?: () => void
+  isMobileDrawer?: boolean
+}
+
+export function Sidebar({ isOpen, onClose, isMobileDrawer = false }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const { data: session } = useSession()
@@ -123,11 +130,16 @@ export function Sidebar() {
     },
   ]
 
-  return (
-    <aside className="w-64 border-r border-[#e3e8ee] dark:border-[#1e2430] bg-white dark:bg-[#0c1018] flex flex-col h-screen shrink-0 select-none transition-colors duration-200">
+  const content = (
+    <div className="flex flex-col h-full">
       {/* Brand logo */}
       <div className="p-4 border-b border-[#f4f6f8] dark:border-[#1e2430] flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2.5 group" title={t('home')}>
+        <Link
+          href="/"
+          onClick={() => isMobileDrawer && onClose?.()}
+          className="flex items-center gap-2.5 group"
+          title={t('home')}
+        >
           <img
             src="/mercant-logo.png"
             alt="Mercant Logo"
@@ -147,6 +159,17 @@ export function Sidebar() {
             </span>
           </div>
         </Link>
+
+        {isMobileDrawer && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1.5 rounded-md text-[#697386] dark:text-[#8792a2] hover:bg-[#f4f6f8] dark:hover:bg-[#1e2430] hover:text-[#0a2540] dark:hover:text-white transition-colors cursor-pointer md:hidden"
+            title="Cerrar menú"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
       </div>
 
       {/* Navigation Groups */}
@@ -165,6 +188,7 @@ export function Sidebar() {
                 <Link
                   key={item.href}
                   href={item.href}
+                  onClick={() => isMobileDrawer && onClose?.()}
                   className={cn(
                     'flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors',
                     isActive
@@ -251,6 +275,30 @@ export function Sidebar() {
           </span>
         </button>
       </div>
+    </div>
+  )
+
+  if (isMobileDrawer) {
+    if (!isOpen) return null
+
+    return (
+      <div className="fixed inset-0 z-50 md:hidden">
+        {/* Backdrop */}
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity animate-in fade-in"
+          onClick={onClose}
+        />
+        {/* Slide-over panel */}
+        <aside className="fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] bg-white dark:bg-[#0c1018] border-r border-[#e3e8ee] dark:border-[#1e2430] shadow-2xl animate-in slide-in-from-left duration-200">
+          {content}
+        </aside>
+      </div>
+    )
+  }
+
+  return (
+    <aside className="hidden md:flex w-64 border-r border-[#e3e8ee] dark:border-[#1e2430] bg-white dark:bg-[#0c1018] flex-col h-screen shrink-0 select-none transition-colors duration-200">
+      {content}
     </aside>
   )
 }

@@ -11,6 +11,7 @@ import { MercadoLibreConnector } from './mercadolibre'
 import { UniversalWebConnector } from './universal_web'
 import { DirectWebScraperConnector } from './direct_scraper'
 import { SerpApiConnector } from './serp'
+import { MockConnector } from './mock'
 
 const CONNECTORS: SupplierConnector[] = [
   new UniversalWebConnector(),
@@ -18,6 +19,8 @@ const CONNECTORS: SupplierConnector[] = [
   new DirectWebScraperConnector(),
   new SerpApiConnector(),
 ]
+
+const fallbackMock = new MockConnector()
 
 export class ConnectorRegistry {
   private connectors: SupplierConnector[]
@@ -34,7 +37,6 @@ export class ConnectorRegistry {
     return this.connectors.filter((c) => c.isAvailable())
   }
 
-
   async searchAll(query: ProductQuery): Promise<RawOffer[]> {
     const available = this.getAvailable()
 
@@ -49,6 +51,16 @@ export class ConnectorRegistry {
       } else {
         const connectorId = available[index]?.config.id ?? 'unknown'
         console.warn(`[ConnectorRegistry] Connector "${connectorId}" error:`, result.reason)
+      }
+    }
+
+    // If live connectors returned no results (e.g. rate limits or offline), provide realistic fallback offers
+    if (offers.length === 0) {
+      try {
+        const mockOffers = await fallbackMock.search(query)
+        offers.push(...mockOffers)
+      } catch (e) {
+        console.warn('[ConnectorRegistry] Fallback mock error:', e)
       }
     }
 

@@ -20,6 +20,8 @@ import {
   Check,
   Radio,
   Plus,
+  Menu,
+  X,
 } from 'lucide-react'
 import { useTheme } from '@/components/providers/ThemeProvider'
 import { useLanguage } from '@/components/providers/LanguageProvider'
@@ -34,6 +36,7 @@ export default function LandingPage() {
   const supabase = createClient()
   const [supabaseUser, setSupabaseUser] = useState<any>(null)
   const [activeTab, setActiveTab] = useState<'compare' | 'trust' | 'budget'>('compare')
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -174,11 +177,90 @@ export default function LandingPage() {
 
             <Link
               href={isAuthenticated ? "/procurements/new" : "/login"}
-              className="px-5 py-2.5 rounded-full text-xs font-bold bg-white text-[#0a2540] hover:bg-slate-100 shadow-lg shadow-black/10 transition-all cursor-pointer"
+              className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-xs font-bold bg-white text-[#0a2540] hover:bg-slate-100 shadow-lg shadow-black/10 transition-all cursor-pointer whitespace-nowrap"
             >
               {isAuthenticated ? t('startQuote') : t('startFree')}
             </Link>
+
+            {/* Hamburger Button on Mobile */}
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer md:hidden"
+              title="Menú"
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
           </div>
+
+          {/* Mobile Dropdown Navigation Drawer */}
+          {mobileMenuOpen && (
+            <div className="absolute top-20 left-0 right-0 bg-[#0d1117]/95 dark:bg-[#0c1018]/98 backdrop-blur-xl border-b border-white/10 p-5 space-y-4 md:hidden shadow-2xl z-50 animate-in slide-in-from-top-2 duration-150">
+              <nav className="flex flex-col space-y-2 text-sm font-semibold text-white/90">
+                <Link
+                  href="/"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="px-3 py-2 rounded-lg hover:bg-white/10 transition-colors"
+                >
+                  {t('home')}
+                </Link>
+                <Link
+                  href={isAuthenticated ? "/procurements" : "/login"}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="px-3 py-2 rounded-lg hover:bg-white/10 transition-colors"
+                >
+                  {t('quotes')}
+                </Link>
+                <Link
+                  href={isAuthenticated ? "/tracking" : "/login"}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="px-3 py-2 rounded-lg hover:bg-white/10 transition-colors"
+                >
+                  {t('priceRadar')}
+                </Link>
+                <Link
+                  href={isAuthenticated ? "/suppliers" : "/login"}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="px-3 py-2 rounded-lg hover:bg-white/10 transition-colors"
+                >
+                  {t('suppliers')}
+                </Link>
+                <Link
+                  href={isAuthenticated ? "/analytics" : "/login"}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="px-3 py-2 rounded-lg hover:bg-white/10 transition-colors"
+                >
+                  {t('analytics')}
+                </Link>
+                <Link
+                  href={isAuthenticated ? "/settings?tab=billing" : "/login"}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="px-3 py-2 rounded-lg hover:bg-white/10 transition-colors text-amber-300"
+                >
+                  {t('upgradeToProMenu')} ★
+                </Link>
+              </nav>
+
+              <div className="pt-3 border-t border-white/10 flex items-center justify-between">
+                {!isAuthenticated && (
+                  <Link
+                    href="/login"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="text-xs font-semibold text-white/80 hover:text-white"
+                  >
+                    {t('logIn')}
+                  </Link>
+                )}
+                <Link
+                  href={isAuthenticated ? "/dashboard" : "/register"}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="px-4 py-2 rounded-full text-xs font-bold bg-[#635bff] text-white hover:bg-[#5349e0] transition-colors"
+                >
+                  {isAuthenticated ? t('viewDashboard') : t('startFree')}
+                </Link>
+              </div>
+            </div>
+          )}
         </header>
 
         {/* ─── Hero Content (Split Text Left & Monitor/Mobile Mockup Right) ─── */}

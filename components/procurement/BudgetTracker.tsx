@@ -1,12 +1,13 @@
 import React from 'react'
 import { formatCurrency } from '@/lib/utils'
-import { DollarSign, TrendingDown, PiggyBank } from 'lucide-react'
+import { DollarSign, TrendingDown, PiggyBank, Edit3, PlusCircle } from 'lucide-react'
 
 interface BudgetTrackerProps {
   budget: number | null
   estimatedCost: number
   totalSavings: number
   currency?: string
+  onEditBudget?: () => void
 }
 
 export function BudgetTracker({
@@ -14,6 +15,7 @@ export function BudgetTracker({
   estimatedCost,
   totalSavings,
   currency = 'MXN',
+  onEditBudget,
 }: BudgetTrackerProps) {
   const remaining = budget != null ? budget - estimatedCost : null
   const percentUsed =
@@ -21,14 +23,28 @@ export function BudgetTracker({
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-      {budget != null && (
-        <div className="p-4 rounded-lg border border-[#e3e8ee] dark:border-[#232a38] bg-white dark:bg-[#151a24] shadow-[0px_1px_1px_rgba(0,0,0,0.03)]">
-          <div className="flex items-center justify-between text-[11px] font-semibold text-[#697386] dark:text-[#8792a2] uppercase tracking-wider mb-1">
-            <span>Presupuesto</span>
-            <DollarSign className="w-3.5 h-3.5 text-[#635bff]" />
-          </div>
-          <div className="text-xl font-bold tracking-tight text-[#0a2540] dark:text-white tabular-nums">
-            {formatCurrency(budget, currency)}
+      {budget != null ? (
+        <div className="p-4 rounded-lg border border-[#e3e8ee] dark:border-[#232a38] bg-white dark:bg-[#151a24] shadow-[0px_1px_1px_rgba(0,0,0,0.03)] flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between text-[11px] font-semibold text-[#697386] dark:text-[#8792a2] uppercase tracking-wider mb-1">
+              <span className="flex items-center gap-1.5">
+                <DollarSign className="w-3.5 h-3.5 text-[#635bff]" />
+                <span>Presupuesto</span>
+              </span>
+              {onEditBudget && (
+                <button
+                  type="button"
+                  onClick={onEditBudget}
+                  className="p-1 text-[#697386] hover:text-[#635bff] dark:hover:text-[#7a73ff] transition-colors cursor-pointer"
+                  title="Modificar presupuesto"
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+            <div className="text-xl font-bold tracking-tight text-[#0a2540] dark:text-white tabular-nums">
+              {formatCurrency(budget, currency)}
+            </div>
           </div>
           {percentUsed != null && (
             <div className="mt-3">
@@ -48,6 +64,30 @@ export function BudgetTracker({
                     : `Excedido: ${formatCurrency(Math.abs(remaining || 0), currency)}`}
                 </span>
               </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="p-4 rounded-lg border border-[#e3e8ee] dark:border-[#232a38] bg-white dark:bg-[#151a24] shadow-[0px_1px_1px_rgba(0,0,0,0.03)] flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between text-[11px] font-semibold text-[#697386] dark:text-[#8792a2] uppercase tracking-wider mb-1">
+              <span>Presupuesto</span>
+              <DollarSign className="w-3.5 h-3.5 text-[#697386]" />
+            </div>
+            <div className="text-xl font-bold tracking-tight text-[#697386] dark:text-[#8792a2]">
+              Sin límite asignado
+            </div>
+          </div>
+          {onEditBudget && (
+            <div className="mt-3">
+              <button
+                type="button"
+                onClick={onEditBudget}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#635bff] dark:text-[#7a73ff] hover:underline cursor-pointer"
+              >
+                <PlusCircle className="w-3.5 h-3.5" />
+                <span>Asignar presupuesto</span>
+              </button>
             </div>
           )}
         </div>
@@ -80,5 +120,4 @@ export function BudgetTracker({
       </div>
     </div>
   )
-
 }

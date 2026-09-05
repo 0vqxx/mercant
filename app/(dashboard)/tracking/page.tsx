@@ -1,4 +1,4 @@
-﻿import React from 'react'
+import React from 'react'
 import { prisma } from '@/lib/db'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/authOptions'
@@ -20,12 +20,16 @@ import Link from 'next/link'
 export const dynamic = 'force-dynamic'
 
 export default async function PriceTrackingPage() {
-  const session = await getServerSession(authOptions)
-  const userId = session?.user?.id
+  let trackingJobs: any[] = []
+  let allItems: any[] = []
 
-  // 1. Fetch any explicit tracking jobs for this user
-  const trackingJobs = userId
-    ? await prisma.priceTracking.findMany({
+  try {
+    const session = await getServerSession(authOptions)
+    const userId = session?.user?.id
+
+    if (userId) {
+      // 1. Fetch any explicit tracking jobs for this user
+      trackingJobs = await prisma.priceTracking.findMany({
         where: { userId },
         include: {
           item: {
@@ -43,11 +47,9 @@ export default async function PriceTrackingPage() {
         },
         orderBy: { createdAt: 'desc' },
       })
-    : []
 
-  // 2. Fetch all procurement items for this user with offers
-  const allItems = userId
-    ? await prisma.procurementItem.findMany({
+      // 2. Fetch all procurement items for this user with offers
+      allItems = await prisma.procurementItem.findMany({
         where: {
           procurement: {
             userId,
@@ -61,16 +63,22 @@ export default async function PriceTrackingPage() {
         },
         orderBy: { createdAt: 'desc' },
       })
-    : []
+    }
+  } catch (err) {
+    console.error('[PriceTrackingPage] Error retrieving tracking jobs:', err)
+    trackingJobs = []
+    allItems = []
+  }
 
   // Build unified monitored items
-  const trackedItems = allItems.map((item) => {
-    const bestOffer = item.offers[0]
-    const worstOffer = item.offers[item.offers.length - 1]
+  const trackedItems = allItems.map((item: any) => {
+    const offers = item.offers || []
+    const bestOffer = offers[0]
+    const worstOffer = offers[offers.length - 1]
     const medianPrice =
-      item.offers.length > 0
+      offers.length > 0
         ? Math.round(
-            item.offers.reduce((acc, o) => acc + o.unitPrice, 0) / item.offers.length,
+            offers.reduce((acc: number, o: any) => acc + (o.unitPrice || 0), 0) / offers.length,
           )
         : 0
     const targetPrice = bestOffer ? Math.round(bestOffer.unitPrice * 0.92) : 0
@@ -82,8 +90,8 @@ export default async function PriceTrackingPage() {
     return {
       id: item.id,
       name: item.name,
-      procurementName: item.procurement.name,
-      procurementId: item.procurement.id,
+      procurementName: item.procurement?.name || 'Compra',
+      procurementId: item.procurement?.id || '',
       quantity: item.quantity,
       bestPrice: bestOffer?.unitPrice || 0,
       targetPrice,
@@ -91,7 +99,7 @@ export default async function PriceTrackingPage() {
       supplier: bestOffer?.supplierName || 'Distribuidor en línea',
       url: bestOffer?.sourceUrl || '#',
       changePct,
-      offersCount: item.offers.length,
+      offersCount: offers.length,
       currency: bestOffer?.currency || item.currency || 'MXN',
       status: 'MONITORING',
     }

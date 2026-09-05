@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -173,14 +173,97 @@ export default function NewProcurementPage() {
         </button>
       </div>
 
-      {/* STEP 1: Paste text input */}
+      {/* STEP 1: Paste text input & Budget Settings */}
       {step === 1 && (
-        <div className="space-y-4">
+        <div className="space-y-5">
+          {/* Metadata & Budget configuration card directly on Step 1 */}
+          <div className="p-5 rounded-lg border border-[#e3e8ee] dark:border-[#232a38] bg-white dark:bg-[#151a24] shadow-[0px_1px_1px_rgba(0,0,0,0.03)] space-y-4">
+            <div className="flex items-center justify-between border-b border-[#f4f6f8] dark:border-[#1e2430] pb-2.5">
+              <div>
+                <h2 className="text-xs font-bold uppercase tracking-wider text-[#0a2540] dark:text-white">
+                  1. Configuración de Presupuesto & Parámetros
+                </h2>
+                <p className="text-[11px] text-[#697386] dark:text-[#8792a2]">
+                  Define tu presupuesto estimado o déjalo en blanco para cotizar sin límite.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-[#0a2540] dark:text-white mb-1">
+                  Nombre de la cotización
+                </label>
+                <Input
+                  value={procurementName}
+                  onChange={(e) => setProcurementName(e.target.value)}
+                  placeholder="Ej. Equipamiento de Oficina Q3"
+                  className="h-8 text-xs bg-[#f8fafc] dark:bg-[#1a2130] border-[#e3e8ee] dark:border-[#232a38]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#0a2540] dark:text-white mb-1">
+                  Tu presupuesto objetivo
+                </label>
+                <div className="flex gap-2">
+                  <Input
+                    type="number"
+                    min={0}
+                    value={budget}
+                    onChange={(e) => setBudget(e.target.value)}
+                    placeholder="Ej. 75000 (opcional)"
+                    className="h-8 text-xs tabular-nums bg-[#f8fafc] dark:bg-[#1a2130] border-[#e3e8ee] dark:border-[#232a38]"
+                  />
+                  <select
+                    value={currency}
+                    onChange={(e) => setCurrency(e.target.value)}
+                    className="h-8 px-2.5 rounded-md border border-[#e3e8ee] dark:border-[#232a38] bg-[#f8fafc] dark:bg-[#1a2130] text-xs font-semibold text-[#0a2540] dark:text-white cursor-pointer"
+                  >
+                    <option value="MXN">MXN</option>
+                    <option value="USD">USD</option>
+                  </select>
+                </div>
+                {/* Quick preset badges */}
+                <div className="flex items-center gap-1.5 mt-2 flex-wrap text-[10px]">
+                  <span className="text-[#8792a2]">Rápidos:</span>
+                  {[
+                    { label: '$25k', val: '25000' },
+                    { label: '$50k', val: '50000' },
+                    { label: '$100k', val: '100000' },
+                    { label: '$200k', val: '200000' },
+                    { label: 'Sin límite', val: '' },
+                  ].map((preset) => (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      onClick={() => setBudget(preset.val)}
+                      className={`px-1.5 py-0.5 rounded border transition-colors cursor-pointer ${
+                        budget === preset.val
+                          ? 'bg-[#635bff] text-white border-[#635bff]'
+                          : 'bg-[#f4f6f8] dark:bg-[#1a2130] text-[#697386] dark:text-[#8792a2] border-[#e3e8ee] dark:border-[#232a38] hover:text-[#0a2540] dark:hover:text-white'
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#0a2540] dark:text-white mb-1">
+                  Criterio de prioridad
+                </label>
+                <PriorityModeSelector value={priorityMode} onChange={setPriorityMode} />
+              </div>
+            </div>
+          </div>
+
           <div className="p-5 rounded-lg border border-[#e3e8ee] dark:border-[#232a38] bg-white dark:bg-[#151a24] shadow-[0px_1px_1px_rgba(0,0,0,0.03)] space-y-4">
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-semibold text-[#0a2540] dark:text-[#0a2540] dark:text-white">
-                  Lista de productos a cotizar
+                <label className="block text-xs font-semibold text-[#0a2540] dark:text-white">
+                  2. Lista de productos a cotizar
                 </label>
                 {rawText ? (
                   <button

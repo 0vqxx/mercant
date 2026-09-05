@@ -45,6 +45,9 @@ export default function ProcurementDetailPage() {
   const [isDeleting, setIsDeleting] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showLinksSummaryModal, setShowLinksSummaryModal] = useState(false)
+  const [showEditBudgetModal, setShowEditBudgetModal] = useState(false)
+  const [editBudgetValue, setEditBudgetValue] = useState('')
+  const [isSavingBudget, setIsSavingBudget] = useState(false)
 
   const searchTriggeredRef = useRef(false)
 
@@ -235,6 +238,30 @@ export default function ProcurementDetailPage() {
     }
   }
 
+  const openEditBudgetModal = () => {
+    setEditBudgetValue(procurement?.budget != null ? String(procurement.budget) : '')
+    setShowEditBudgetModal(true)
+  }
+
+  const handleSaveBudget = async () => {
+    setIsSavingBudget(true)
+    try {
+      const newBudget = editBudgetValue.trim() !== '' ? parseFloat(editBudgetValue) : null
+      const res = await fetch(`/api/procurements/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ budget: newBudget }),
+      })
+      if (!res.ok) throw new Error('Error al actualizar el presupuesto')
+      setProcurement((prev: any) => ({ ...prev, budget: newBudget }))
+      setShowEditBudgetModal(false)
+    } catch (err: any) {
+      alert(err.message)
+    } finally {
+      setIsSavingBudget(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="py-24 text-center space-y-3">
@@ -382,6 +409,7 @@ export default function ProcurementDetailPage() {
           estimatedCost={totalEstimatedSpend}
           totalSavings={totalSavings}
           currency={procurement.currency}
+          onEditBudget={openEditBudgetModal}
         />
       )}
 
@@ -685,6 +713,81 @@ export default function ProcurementDetailPage() {
                 isLoading={isDeleting}
               >
                 Eliminar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Budget modal */}
+      {showEditBudgetModal && (
+        <div className="fixed inset-0 z-50 bg-[#0a2540]/40 backdrop-blur-[2px] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#151a24] rounded-lg border border-[#e3e8ee] dark:border-[#232a38] p-5 max-w-sm w-full space-y-4 shadow-[0px_20px_40px_rgba(0,0,0,0.15)] animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-2 border-b border-[#f4f6f8] dark:border-[#1e2430]">
+              <h3 className="font-semibold text-sm text-[#0a2540] dark:text-white">
+                Definir / Editar Presupuesto
+              </h3>
+              <button
+                onClick={() => setShowEditBudgetModal(false)}
+                className="p-1 rounded text-[#697386] hover:text-[#0a2540] dark:hover:text-white cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-[#0a2540] dark:text-white mb-1">
+                  Monto límite ({procurement.currency})
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  value={editBudgetValue}
+                  onChange={(e) => setEditBudgetValue(e.target.value)}
+                  placeholder="Ej. 100000 o vacío para sin límite"
+                  className="w-full h-8 px-3 text-xs tabular-nums bg-[#f8fafc] dark:bg-[#1a2130] border border-[#e3e8ee] dark:border-[#232a38] rounded-md text-[#0a2540] dark:text-white focus:outline-none focus:border-[#635bff]"
+                />
+              </div>
+
+              {/* Quick preset buttons */}
+              <div className="flex items-center gap-1.5 flex-wrap text-[11px]">
+                <span className="text-[#8792a2] text-[10px]">Atajos:</span>
+                {[
+                  { label: '$25k', val: '25000' },
+                  { label: '$50k', val: '50000' },
+                  { label: '$100k', val: '100000' },
+                  { label: '$250k', val: '250000' },
+                  { label: 'Sin límite', val: '' },
+                ].map((preset) => (
+                  <button
+                    key={preset.label}
+                    type="button"
+                    onClick={() => setEditBudgetValue(preset.val)}
+                    className="px-2 py-0.5 rounded border border-[#e3e8ee] dark:border-[#232a38] bg-[#f8fafc] dark:bg-[#1a2130] text-[#697386] dark:text-[#8792a2] hover:text-[#0a2540] dark:hover:text-white transition-colors cursor-pointer"
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#f4f6f8] dark:border-[#1e2430]">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowEditBudgetModal(false)}
+                disabled={isSavingBudget}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleSaveBudget}
+                isLoading={isSavingBudget}
+              >
+                Guardar presupuesto
               </Button>
             </div>
           </div>

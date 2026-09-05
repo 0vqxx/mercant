@@ -1,11 +1,9 @@
 import { type NextAuthOptions } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
-import { PrismaAdapter } from '@auth/prisma-adapter'
 import { prisma } from '@/lib/db'
 import bcrypt from 'bcryptjs'
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma) as any,
   session: {
     strategy: 'jwt',
   },
@@ -24,24 +22,29 @@ export const authOptions: NextAuthOptions = {
           return null
         }
 
-        const email = credentials.email.toLowerCase().trim()
-        const user = await prisma.user.findUnique({
-          where: { email },
-        })
+        try {
+          const email = credentials.email.toLowerCase().trim()
+          const user = await prisma.user.findUnique({
+            where: { email },
+          })
 
-        if (!user || !user.passwordHash) {
+          if (!user || !user.passwordHash) {
+            return null
+          }
+
+          const isValid = await bcrypt.compare(credentials.password, user.passwordHash)
+          if (!isValid) {
+            return null
+          }
+
+          return {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+          }
+        } catch (err) {
+          console.error('[authOptions] authorize error:', err)
           return null
-        }
-
-        const isValid = await bcrypt.compare(credentials.password, user.passwordHash)
-        if (!isValid) {
-          return null
-        }
-
-        return {
-          id: user.id,
-          name: user.name,
-          email: user.email,
         }
       },
     }),
@@ -54,7 +57,7 @@ export const authOptions: NextAuthOptions = {
       return token
     },
     async session({ session, token }) {
-      if (session.user && token.id) {
+      if (session?.user && token?.id) {
         session.user.id = token.id as string
       }
       return session
