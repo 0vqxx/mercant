@@ -53,12 +53,23 @@ export default function ProcurementDetailPage() {
 
 
   const fetchProcurement = async () => {
-    if (!id) return
+    if (!id) {
+      setLoading(false)
+      return null
+    }
+
     let localData: any = null
     if (typeof window !== 'undefined') {
       try {
         const saved = localStorage.getItem('mercant_procurement_' + id)
-        if (saved) localData = JSON.parse(saved)
+        if (saved) {
+          localData = JSON.parse(saved)
+          setProcurement(localData)
+          if (localData?.priorityMode) {
+            setPriorityMode(localData.priorityMode)
+          }
+          setLoading(false)
+        }
       } catch {}
     }
 
@@ -77,6 +88,7 @@ export default function ProcurementDetailPage() {
             } catch {}
           }
           setError(null)
+          setLoading(false)
           return data.procurement
         }
       }
@@ -90,10 +102,31 @@ export default function ProcurementDetailPage() {
         setPriorityMode(localData.priorityMode)
       }
       setError(null)
+      setLoading(false)
       return localData
     }
 
+    // Check all procurements cache if individual item not found
+    if (typeof window !== 'undefined') {
+      try {
+        const allCache = localStorage.getItem('mercant_procurements_cache')
+        if (allCache) {
+          const list = JSON.parse(allCache)
+          const found = Array.isArray(list) ? list.find((p: any) => p.id === id) : null
+          if (found) {
+            setProcurement(found)
+            if (found.priorityMode) setPriorityMode(found.priorityMode)
+            setError(null)
+            setLoading(false)
+            return found
+          }
+        }
+      } catch {}
+    }
+
     setError('No se pudo encontrar la cotización')
+    setLoading(false)
+    return null
   }
 
   const triggerSearch = async (procToSearch?: any) => {
