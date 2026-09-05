@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import Link from 'next/link'
 import { prisma } from '@/lib/db'
 import { getServerSession } from 'next-auth'
@@ -30,7 +30,7 @@ export default async function ProcurementsListPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#e3e8ee] dark:border-[#1e2430]">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#0a2540] dark:text-white">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#0a2540] dark:text-[#0a2540] dark:text-white">
             Mis Compras y Solicitudes
           </h1>
           <p className="text-xs text-[#697386] dark:text-[#8792a2] mt-0.5">
@@ -84,7 +84,7 @@ export default async function ProcurementsListPage() {
                     key={proc.id}
                     className="hover:bg-[#f8fafc] dark:hover:bg-[#121826]/70 transition-colors"
                   >
-                    <td className="py-3.5 px-5 font-semibold text-[#0a2540] dark:text-white">
+                    <td className="py-3.5 px-5 font-semibold text-[#0a2540] dark:text-[#0a2540] dark:text-white">
                       <Link
                         href={`/procurements/${proc.id}`}
                         className="hover:text-[#635bff] dark:hover:text-[#7a73ff]"

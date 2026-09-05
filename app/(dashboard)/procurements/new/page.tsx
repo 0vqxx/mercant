@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -128,7 +128,7 @@ export default function NewProcurementPage() {
     <div className="max-w-4xl mx-auto space-y-8">
       {/* Header */}
       <div className="pb-4 border-b border-slate-200 dark:border-slate-800">
-        <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">
+        <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-[#0a2540] dark:text-white">
           Nueva Búsqueda & Sourcing
         </h1>
         <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
@@ -179,7 +179,7 @@ export default function NewProcurementPage() {
           <div className="p-5 rounded-lg border border-[#e3e8ee] dark:border-[#232a38] bg-white dark:bg-[#151a24] shadow-[0px_1px_1px_rgba(0,0,0,0.03)] space-y-4">
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-semibold text-[#0a2540] dark:text-white">
+                <label className="block text-xs font-semibold text-[#0a2540] dark:text-[#0a2540] dark:text-white">
                   Lista de productos a cotizar
                 </label>
                 {rawText ? (
@@ -290,7 +290,7 @@ export default function NewProcurementPage() {
           <div className="rounded-lg border border-[#e3e8ee] dark:border-[#232a38] bg-white dark:bg-[#151a24] shadow-[0px_1px_1px_rgba(0,0,0,0.03)] overflow-hidden">
             <div className="p-3.5 border-b border-[#f4f6f8] dark:border-[#1e2430] flex items-center justify-between">
               <div>
-                <h3 className="text-xs font-bold uppercase tracking-wider text-[#0a2540] dark:text-white">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-[#0a2540] dark:text-[#0a2540] dark:text-white">
                   Artículos identificados ({items.length})
                 </h3>
                 <p className="text-[11px] text-[#697386] dark:text-[#8792a2]">

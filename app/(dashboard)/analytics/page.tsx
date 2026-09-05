@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import Link from 'next/link'
 import { prisma } from '@/lib/db'
 import { formatCurrency } from '@/lib/utils'
@@ -114,7 +114,7 @@ export default async function AnalyticsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#e3e8ee] dark:border-[#232a38]">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#0a2540] dark:text-white">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#0a2540] dark:text-[#0a2540] dark:text-white">
             Reporte de Ahorro & Inteligencia Financiera
           </h1>
           <p className="text-xs text-[#697386] dark:text-[#8792a2] mt-0.5">

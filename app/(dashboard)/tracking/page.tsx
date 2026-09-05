@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { prisma } from '@/lib/db'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
@@ -103,7 +103,7 @@ export default async function PriceTrackingPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#e3e8ee] dark:border-[#232a38]">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#0a2540] dark:text-white">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#0a2540] dark:text-[#0a2540] dark:text-white">
               Radar de Precios & Monitoreo Continuo
             </h1>
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-[#edfcf2] text-[#059669] border border-[#a7f3d0] dark:bg-[#064e3b]/30 dark:text-[#34d399]">
