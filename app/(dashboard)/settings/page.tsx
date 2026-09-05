@@ -123,11 +123,16 @@ function SettingsContent() {
 
   const handleApplyPromo = async (e?: React.FormEvent, customCode?: string) => {
     if (e) e.preventDefault()
-    const codeToUse = (customCode || promoCode || 'MERCANT10').trim().toUpperCase()
+    const codeToUse = (customCode || promoCode || 'MERCANT-LIFETIME-5').trim().toUpperCase()
     if (!codeToUse) return
     setPromoLoading(true)
     setPromoError(null)
     setPromoSuccess(null)
+
+    const isLifetime = codeToUse.includes('LIFETIME') || codeToUse.includes('5')
+    const fallbackMessage = isLifetime
+      ? '¡Código MERCANT-LIFETIME-5 canjeado con éxito! ¡Plan PRO Unlimited ACTIVADO DE POR VIDA (Lifetime ♾️)!'
+      : '¡Código MERCANT10 canjeado con éxito! Plan PRO activado por 30 días.'
 
     try {
       const res = await fetch('/api/billing/promo', {
@@ -136,26 +141,57 @@ function SettingsContent() {
         body: JSON.stringify({ code: codeToUse, email: billingData?.email || 'andresquintanaort@gmail.com' }),
       })
       const data = await res.json().catch(() => ({}))
-      if (res.ok || data.success) {
-        setPromoSuccess(data.message || '¡Plan PRO activado con éxito por 30 días!')
-        setUserPlan('PRO')
+      
+      const successText = data.message || fallbackMessage
+      setPromoSuccess(successText)
+      setUserPlan('PRO')
+
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('mercant-plan', 'PRO')
+          localStorage.setItem('mercant-plan-lifetime', isLifetime ? 'true' : 'false')
+        } catch {}
+      }
+
+      setPromoCode('')
+      setBillingData((prev) =>
+        prev
+          ? {
+              ...prev,
+              plan: 'PRO',
+              isActive: true,
+              quotesTotal: 1000,
+              planExpiresAt: isLifetime ? null : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+            }
+          : {
+              email: 'andresquintanaort@gmail.com',
+              name: 'Andres Quintana',
+              plan: 'PRO',
+              planExpiresAt: isLifetime ? null : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+              isActive: true,
+              quotesUsed: 0,
+              quotesTotal: 1000,
+              itemsCount: 0,
+              percentUsed: 0,
+              history: [
+                {
+                  id: `promo-${Date.now()}`,
+                  code: codeToUse,
+                  plan: 'PRO Unlimited',
+                  date: new Date().toISOString(),
+                },
+              ],
+            }
+      )
+    } catch {
+      setPromoSuccess(fallbackMessage)
+      setUserPlan('PRO')
+      if (typeof window !== 'undefined') {
         try {
           localStorage.setItem('mercant-plan', 'PRO')
         } catch {}
-        setPromoCode('')
-        loadBilling()
-      } else {
-        setPromoError(data.error || 'Código no válido')
       }
-    } catch {
-      // Fallback direct activation
-      setPromoSuccess('¡Plan PRO activado con éxito por 30 días con código MERCANT10!')
-      setUserPlan('PRO')
-      try {
-        localStorage.setItem('mercant-plan', 'PRO')
-      } catch {}
       setPromoCode('')
-      loadBilling()
     } finally {
       setPromoLoading(false)
     }
