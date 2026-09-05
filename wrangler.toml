@@ -1,0 +1,24 @@
+# Mercant AI — Cloudflare Pages deployment config
+name = "mercant"
+pages_build_output_dir = ".vercel/output/static"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+[env.production]
+name = "mercant"
+
+# ────────────────────────────────────────────────────────────────────────────
+# Bindings — add your KV / D1 / R2 namespaces below after creating them in
+# the Cloudflare Dashboard → Workers & Pages → Your project → Settings
+# ────────────────────────────────────────────────────────────────────────────
+
+# Example KV binding (uncomment & fill after creating in dashboard):
+# [[kv_namespaces]]
+# binding = "KV"
+# id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+# Example D1 binding (uncomment & fill after creating in dashboard):
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "mercant-db"
+# database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
