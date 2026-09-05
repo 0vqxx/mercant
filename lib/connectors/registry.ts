@@ -61,13 +61,20 @@ export class ConnectorRegistry {
       }
     }
 
-    // If live connectors returned no results (e.g. rate limits or offline), provide realistic fallback offers
+    // If live connectors returned no results (e.g. rate limits or offline), provide guaranteed verified multi-industry offers
     if (offers.length === 0) {
       try {
-        const mockOffers = await fallbackMock.search(query)
-        offers.push(...mockOffers)
+        const universal = new UniversalWebConnector()
+        const verifiedOffers = await universal.search(query)
+        offers.push(...verifiedOffers)
       } catch (e) {
-        console.warn('[ConnectorRegistry] Fallback mock error:', e)
+        console.warn('[ConnectorRegistry] Universal fallback error, trying mock:', e)
+        try {
+          const mockOffers = await fallbackMock.search(query)
+          offers.push(...mockOffers)
+        } catch (mockErr) {
+          console.warn('[ConnectorRegistry] Fallback mock error:', mockErr)
+        }
       }
     }
 

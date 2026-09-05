@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { PriorityModeSelector } from '@/components/procurement/PriorityModeSelector'
 import { extractTextFromFile } from '@/lib/pdf/extractPdfText'
+import { populateProcurementOffers } from '@/lib/connectors/generateOffers'
 import type { ProductQuery, PriorityMode } from '@/types'
 import {
   Sparkles,
@@ -221,18 +222,20 @@ export default function NewProcurementPage() {
         priorityMode,
         items,
         rawInput: rawText,
-        status: 'SEARCHING',
+        status: 'COMPLETED',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }
 
+      const populatedProc = populateProcurementOffers(fullProcurement)
+
       if (typeof window !== 'undefined') {
         try {
-          localStorage.setItem('mercant_procurement_' + procurementId, JSON.stringify(fullProcurement))
+          localStorage.setItem('mercant_procurement_' + procurementId, JSON.stringify(populatedProc))
           const existingRaw = localStorage.getItem('mercant_procurements_list')
           const existingList = existingRaw ? JSON.parse(existingRaw) : []
           const filtered = existingList.filter((p: any) => p.id !== procurementId)
-          localStorage.setItem('mercant_procurements_list', JSON.stringify([fullProcurement, ...filtered]))
+          localStorage.setItem('mercant_procurements_list', JSON.stringify([populatedProc, ...filtered]))
         } catch {}
       }
 

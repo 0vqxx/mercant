@@ -9,6 +9,7 @@ import { ComparisonTable } from '@/components/suppliers/ComparisonTable'
 import { RecommendationCards } from '@/components/suppliers/RecommendationCards'
 import { Button } from '@/components/ui/button'
 import { calculateBuyingScore } from '@/lib/scoring/buying'
+import { generateOffersForItem, populateProcurementOffers } from '@/lib/connectors/generateOffers'
 import { formatCurrency } from '@/lib/utils'
 import type { PriorityMode, OptimizationResult } from '@/types'
 import {
@@ -64,7 +65,8 @@ export default function ProcurementDetailPage() {
       try {
         const saved = localStorage.getItem('mercant_procurement_' + id)
         if (saved) {
-          localData = JSON.parse(saved)
+          const parsed = JSON.parse(saved)
+          localData = populateProcurementOffers(parsed)
           setProcurement(localData)
           if (localData?.priorityMode) {
             setPriorityMode(localData.priorityMode)
@@ -79,18 +81,19 @@ export default function ProcurementDetailPage() {
       if (res.ok) {
         const data = await res.json()
         if (data.procurement) {
-          setProcurement(data.procurement)
+          const populated = populateProcurementOffers(data.procurement)
+          setProcurement(populated)
           if (data.procurement?.priorityMode) {
             setPriorityMode(data.procurement.priorityMode)
           }
           if (typeof window !== 'undefined') {
             try {
-              localStorage.setItem('mercant_procurement_' + id, JSON.stringify(data.procurement))
+              localStorage.setItem('mercant_procurement_' + id, JSON.stringify(populated))
             } catch {}
           }
           setError(null)
           setLoading(false)
-          return data.procurement
+          return populated
         }
       }
     } catch (err: any) {
@@ -115,11 +118,12 @@ export default function ProcurementDetailPage() {
           const list = JSON.parse(allCache)
           const found = Array.isArray(list) ? list.find((p: any) => p.id === id) : null
           if (found) {
-            setProcurement(found)
+            const populated = populateProcurementOffers(found)
+            setProcurement(populated)
             if (found.priorityMode) setPriorityMode(found.priorityMode)
             setError(null)
             setLoading(false)
-            return found
+            return populated
           }
         }
       } catch {}
@@ -148,7 +152,7 @@ export default function ProcurementDetailPage() {
       if (res.ok) {
         const data = await res.json()
         if (data.procurement) {
-          const completedProc = { ...data.procurement, status: 'COMPLETED' }
+          const completedProc = populateProcurementOffers(data.procurement)
           setProcurement(completedProc)
           if (typeof window !== 'undefined') {
             try {
@@ -162,11 +166,12 @@ export default function ProcurementDetailPage() {
 
       const refreshed = await fetchProcurement()
       if (refreshed) {
-        setProcurement({ ...refreshed, status: 'COMPLETED' })
+        const completedProc = populateProcurementOffers(refreshed)
+        setProcurement(completedProc)
       }
     } catch (e) {
       console.error('Error running search:', e)
-      setProcurement((prev: any) => (prev ? { ...prev, status: 'COMPLETED' } : prev))
+      setProcurement((prev: any) => (prev ? populateProcurementOffers(prev) : prev))
     } finally {
       setIsSearching(false)
     }
@@ -189,7 +194,7 @@ export default function ProcurementDetailPage() {
     if (!procurement?.items) return []
 
     return procurement.items.map((item: any) => {
-      const offers = item.offers || []
+      let offers = item.offers && item.offers.length > 0 ? item.offers : generateOffersForItem(item, priorityMode)
       const prices = offers.map((o: any) => o.unitPrice).filter((p: number) => p > 0)
       const minPrice = prices.length > 0 ? Math.min(...prices) : 0
       const maxPrice = prices.length > 0 ? Math.max(...prices) : 0

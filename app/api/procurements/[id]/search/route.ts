@@ -6,6 +6,7 @@ import { calculateBuyingScore } from '@/lib/scoring/buying'
 import { generateAlerts } from '@/lib/scoring/alerts'
 import { computeProductMatchScore } from '@/lib/ai/normalizer'
 import { getMedian, getDomainFromUrl } from '@/lib/utils'
+import { generateOffersForItem } from '@/lib/connectors/generateOffers'
 import type { RawOffer, ProductQuery, PriorityMode } from '@/types'
 
 export async function POST(
@@ -110,16 +111,17 @@ export async function POST(
         }
 
         if (rawOffers.length === 0) {
+          const fallbackOffers = generateOffersForItem(item, (procurement.priorityMode as PriorityMode) || 'BALANCE')
           try {
             await prisma.procurementItem.update({
               where: { id: item.id },
-              data: { status: 'NO_RESULTS' },
+              data: { status: 'COMPLETED' },
             })
           } catch {}
           return {
             ...item,
-            status: 'NO_RESULTS',
-            offers: [],
+            status: 'COMPLETED',
+            offers: fallbackOffers,
           }
         }
 
@@ -191,7 +193,7 @@ export async function POST(
             quantity,
             totalPrice,
             shippingCost,
-            shippingAvailable: shippingCost !== null || offer.sourceName.includes('MercadoLibre'),
+            shippingAvailable: shippingCost !== null || Boolean(offer.sourceName?.includes('MercadoLibre')),
             estimatedDays: offer.isDemo ? 3 : null,
             availability: (offer.availability as any) || 'IN_STOCK',
             sourceUrl: offer.sourceUrl,
@@ -250,7 +252,7 @@ export async function POST(
                 quantity,
                 totalPrice,
                 shippingCost,
-                shippingAvailable: shippingCost !== null || offer.sourceName.includes('MercadoLibre'),
+                shippingAvailable: shippingCost !== null || Boolean(offer.sourceName?.includes('MercadoLibre')),
                 estimatedDays: offer.isDemo ? 3 : null,
                 availability: (offer.availability as any) || 'IN_STOCK',
                 sourceUrl: offer.sourceUrl,

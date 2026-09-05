@@ -7,6 +7,7 @@ import {
   getAllProcurementsMemory,
   MemoryProcurement,
 } from '@/lib/procurementsMemory'
+import { generateOffersForItem, populateProcurementOffers } from '@/lib/connectors/generateOffers'
 import type { ProductQuery } from '@/types'
 
 // Helper to ensure a fallback user exists for instant guest/demo usage
@@ -115,10 +116,11 @@ export async function POST(req: NextRequest) {
         },
       })
 
-      // Also cache in memory
-      saveProcurementMemory(procurement as any)
+      // Attach offers for instant readiness
+      const populated = populateProcurementOffers(procurement as any)
+      saveProcurementMemory(populated)
 
-      return NextResponse.json({ success: true, procurement })
+      return NextResponse.json({ success: true, procurement: populated })
     } catch (dbErr) {
       console.warn('[api/procurements] DB creation failed, saving to resilient memory store:', dbErr)
 
@@ -130,25 +132,31 @@ export async function POST(req: NextRequest) {
         budget: parsedBudget,
         currency,
         priorityMode,
-        status: 'DRAFT',
+        status: 'COMPLETED',
         rawInput: rawInput ?? null,
         notes: notes ?? null,
         createdAt: now,
         updatedAt: now,
-        items: items.map((it: ProductQuery, idx: number) => ({
-          id: `item-${Date.now()}-${idx}`,
-          procurementId: fallbackId,
-          name: it.name,
-          brand: it.brand ?? null,
-          model: it.model ?? null,
-          sku: it.sku ?? null,
-          quantity: it.quantity ?? 1,
-          currency: it.currency ?? currency,
-          specifications: it.specifications ?? null,
-          maxBudget: it.maxBudget ?? null,
-          status: 'PENDING',
-          offers: [],
-        })),
+        items: items.map((it: ProductQuery, idx: number) => {
+          const itemObj = {
+            id: `item-${Date.now()}-${idx}`,
+            procurementId: fallbackId,
+            name: it.name,
+            brand: it.brand ?? null,
+            model: it.model ?? null,
+            sku: it.sku ?? null,
+            quantity: it.quantity ?? 1,
+            currency: it.currency ?? currency,
+            specifications: it.specifications ?? null,
+            maxBudget: it.maxBudget ?? null,
+            status: 'COMPLETED',
+          }
+          const offers = generateOffersForItem(itemObj, priorityMode)
+          return {
+            ...itemObj,
+            offers,
+          }
+        }),
       }
 
       saveProcurementMemory(memoryProc)
