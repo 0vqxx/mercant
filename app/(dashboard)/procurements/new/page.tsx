@@ -213,6 +213,29 @@ export default function NewProcurementPage() {
         createData?.id || 
         `proc-${Date.now()}`
 
+      const fullProcurement = createData?.procurement || {
+        id: procurementId,
+        name: procurementName.trim() || 'Compra sin nombre',
+        budget: parsedBudget,
+        currency,
+        priorityMode,
+        items,
+        rawInput: rawText,
+        status: 'SEARCHING',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('mercant_procurement_' + procurementId, JSON.stringify(fullProcurement))
+          const existingRaw = localStorage.getItem('mercant_procurements_list')
+          const existingList = existingRaw ? JSON.parse(existingRaw) : []
+          const filtered = existingList.filter((p: any) => p.id !== procurementId)
+          localStorage.setItem('mercant_procurements_list', JSON.stringify([fullProcurement, ...filtered]))
+        } catch {}
+      }
+
       const targetUrl = `/procurements/${encodeURIComponent(procurementId)}?startSearch=true`
 
       try {

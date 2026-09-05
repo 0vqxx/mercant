@@ -14,6 +14,7 @@ export async function POST(
 ) {
   try {
     const { id } = await params
+    const body = await req.json().catch(() => ({}))
 
     let procurement: any = null
     try {
@@ -30,6 +31,21 @@ export async function POST(
     if (!procurement) {
       const { getProcurementMemory } = await import('@/lib/procurementsMemory')
       procurement = getProcurementMemory(id)
+    }
+
+    if (!procurement && (body.procurement || body.items)) {
+      const { saveProcurementMemory } = await import('@/lib/procurementsMemory')
+      const fallbackProc = body.procurement || {
+        id,
+        name: body.name || 'Compra sin nombre',
+        budget: body.budget || null,
+        currency: body.currency || 'MXN',
+        priorityMode: body.priorityMode || 'BALANCE',
+        items: body.items || [],
+        status: 'SEARCHING',
+      }
+      saveProcurementMemory(fallbackProc)
+      procurement = fallbackProc
     }
 
     if (!procurement) {
@@ -267,7 +283,13 @@ export async function POST(
       items: updatedMemoryItems,
     })
 
-    return NextResponse.json({ success: true, procurementId: id })
+    const finalProc = {
+      ...procurement,
+      status: 'COMPLETED',
+      items: updatedMemoryItems,
+    }
+
+    return NextResponse.json({ success: true, procurementId: id, procurement: finalProc })
   } catch (err: any) {
     console.error('[api/procurements/[id]/search] error:', err)
     return NextResponse.json({ success: true, procurementId: (await params).id })

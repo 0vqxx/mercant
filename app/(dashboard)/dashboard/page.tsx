@@ -20,14 +20,26 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    let localList: any[] = []
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('mercant_procurements_list')
+        if (saved) localList = JSON.parse(saved)
+      } catch {}
+    }
+
     fetch('/api/procurements')
       .then((res) => (res.ok ? res.json() : { procurements: [] }))
       .then((data) => {
-        setProcurements(data.procurements || [])
+        const serverList = data.procurements || []
+        const map = new Map<string, any>()
+        for (const p of localList) map.set(p.id, p)
+        for (const p of serverList) map.set(p.id, p)
+        setProcurements(Array.from(map.values()))
       })
       .catch((err) => {
         console.warn('[DashboardPage] Notice:', err)
-        setProcurements([])
+        setProcurements(localList)
       })
       .finally(() => setLoading(false))
   }, [])

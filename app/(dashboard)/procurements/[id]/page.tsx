@@ -54,30 +54,76 @@ export default function ProcurementDetailPage() {
 
   const fetchProcurement = async () => {
     if (!id) return
+    let localData: any = null
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('mercant_procurement_' + id)
+        if (saved) localData = JSON.parse(saved)
+      } catch {}
+    }
+
     try {
       const res = await fetch(`/api/procurements/${id}`)
-      if (!res.ok) throw new Error('No se pudo cargar la compra')
-      const data = await res.json()
-      setProcurement(data.procurement)
-      if (data.procurement?.priorityMode) {
-        setPriorityMode(data.procurement.priorityMode)
+      if (res.ok) {
+        const data = await res.json()
+        if (data.procurement) {
+          setProcurement(data.procurement)
+          if (data.procurement?.priorityMode) {
+            setPriorityMode(data.procurement.priorityMode)
+          }
+          if (typeof window !== 'undefined') {
+            try {
+              localStorage.setItem('mercant_procurement_' + id, JSON.stringify(data.procurement))
+            } catch {}
+          }
+          setError(null)
+          return data.procurement
+        }
       }
-      return data.procurement
     } catch (err: any) {
-      setError(err.message)
-    } finally {
-      setLoading(false)
+      console.warn('[fetchProcurement] API fetch warning:', err)
     }
+
+    if (localData) {
+      setProcurement(localData)
+      if (localData.priorityMode) {
+        setPriorityMode(localData.priorityMode)
+      }
+      setError(null)
+      return localData
+    }
+
+    setError('No se pudo encontrar la cotización')
   }
 
-  const triggerSearch = async () => {
+  const triggerSearch = async (procToSearch?: any) => {
     setIsSearching(true)
+    const currentProc = procToSearch || procurement
     try {
-      const res = await fetch(`/api/procurements/${id}/search`, { method: 'POST' })
-      if (!res.ok) {
+      const res = await fetch(`/api/procurements/${id}/search`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          procurement: currentProc,
+          items: currentProc?.items,
+          currency: currentProc?.currency,
+          priorityMode: currentProc?.priorityMode || priorityMode,
+        }),
+      })
+
+      if (res.ok) {
         const data = await res.json()
-        console.warn('Search warning:', data.error)
+        if (data.procurement) {
+          setProcurement(data.procurement)
+          if (typeof window !== 'undefined') {
+            try {
+              localStorage.setItem('mercant_procurement_' + id, JSON.stringify(data.procurement))
+            } catch {}
+          }
+          return
+        }
       }
+
       await fetchProcurement()
     } catch (e) {
       console.error('Error running search:', e)
@@ -92,7 +138,7 @@ export default function ProcurementDetailPage() {
         const hasOffers = proc.items?.some((i: any) => i.offers && i.offers.length > 0)
         if ((startSearch || !hasOffers) && !searchTriggeredRef.current) {
           searchTriggeredRef.current = true
-          triggerSearch()
+          triggerSearch(proc)
         }
       }
     })
