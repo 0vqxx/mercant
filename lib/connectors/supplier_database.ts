@@ -5,6 +5,8 @@
  * private RFPs, and corporate procurement in Mexico, LATAM, and global sourcing.
  */
 
+import { resolveDirectProductUrl } from './direct_product_resolver'
+
 export interface SupplierEntry {
   id: string
   name: string
@@ -148,9 +150,8 @@ function cleanSearchQuery(text: string): string {
 }
 
 function createGenericUrl(domain: string, searchPath: string, paramName = 'q') {
-  return (text: string) => {
-    const q = encodeURIComponent(cleanSearchQuery(text))
-    return `https://${domain}${searchPath}${paramName}=${q}`
+  return (text: string, brand?: string, model?: string) => {
+    return resolveDirectProductUrl(domain, text, brand, model)
   }
 }
 
@@ -163,7 +164,7 @@ export const MASTER_SUPPLIER_CATALOG: SupplierEntry[] = [
     category: 'tecnologia',
     categoryLabel: 'Tecnología & Redes',
     keywords: ['laptop', 'computadora', 'monitor', 'teclado', 'mouse', 'servidor', 'switch', 'router', 'disco', 'ssd', 'ram'],
-    buildUrl: (text) => `https://www.amazon.com.mx/s?k=${encodeURIComponent(cleanSearchQuery(text))}&ref=mercant_procure`,
+    buildUrl: (text, brand, model) => resolveDirectProductUrl('amazon.com.mx', text, brand, model),
     baseRating: 4.8,
     reviews: 4890,
     trustBaseline: 98,
@@ -178,7 +179,7 @@ export const MASTER_SUPPLIER_CATALOG: SupplierEntry[] = [
     category: 'tecnologia',
     categoryLabel: 'Tecnología & Redes',
     keywords: ['laptop', 'computadora', 'servidor', 'switch', 'router', 'red', 'monitor', 'procesador', 'dell', 'lenovo', 'hp'],
-    buildUrl: (text) => `https://listado.mercadolibre.com.mx/${encodeURIComponent(cleanSearchQuery(text).replace(/\s+/g, '-'))}#mercant`,
+    buildUrl: (text, brand, model) => resolveDirectProductUrl('mercadolibre.com.mx', text, brand, model),
     baseRating: 4.7,
     reviews: 3450,
     trustBaseline: 96,
@@ -193,7 +194,7 @@ export const MASTER_SUPPLIER_CATALOG: SupplierEntry[] = [
     category: 'tecnologia',
     categoryLabel: 'Tecnología & Redes',
     keywords: ['laptop', 'monitor', 'teclado', 'mouse', 'servidor', 'switch', 'router', 'ram', 'ssd', 'tarjeta madre', 'fuente', 'gabinete'],
-    buildUrl: createGenericUrl('www.cyberpuerta.mx', '/index.php?cl=search&', 'searchparam'),
+    buildUrl: (text, brand, model) => resolveDirectProductUrl('cyberpuerta.mx', text, brand, model),
     baseRating: 4.7,
     reviews: 1980,
     trustBaseline: 95,
@@ -208,7 +209,7 @@ export const MASTER_SUPPLIER_CATALOG: SupplierEntry[] = [
     category: 'tecnologia',
     categoryLabel: 'Tecnología & Redes',
     keywords: ['dell', 'optiplex', 'latitude', 'precision', 'vostro', 'poweredge', 'servidor dell', 'monitor dell'],
-    buildUrl: (text) => `https://www.dell.com/es-mx/search/${encodeURIComponent(cleanSearchQuery(text))}`,
+    buildUrl: (text, brand, model) => resolveDirectProductUrl('dell.com/mx', text, brand, model),
     baseRating: 4.8,
     reviews: 2150,
     trustBaseline: 98,
@@ -828,7 +829,7 @@ export function getMasterSupplierDatabase(): SupplierEntry[] {
         category: dist.cat,
         categoryLabel: CATEGORY_METADATA[dist.cat].label,
         keywords: dist.kw,
-        buildUrl: (text) => `https://www.google.com/search?q=${encodeURIComponent(`${cleanSearchQuery(text)} ${dist.prefix} ${hub}`)}`,
+        buildUrl: (text, brand, model) => resolveDirectProductUrl(`${slug}.com.mx`, text, brand, model),
         baseRating: parseFloat((4.4 + (counter % 5) * 0.1).toFixed(1)),
         reviews: 200 + (counter % 30) * 45,
         trustBaseline: 90 + (counter % 9),

@@ -87,7 +87,7 @@ function lerp(min: number, max: number, t: number): number {
 
 function buildProductUrl(domain: string, productName: string): string {
   const slug = encodeURIComponent(productName.trim().toLowerCase().replace(/\s+/g, '-'))
-  return `https://www.${domain}/search?q=${slug}&ref=procureai`
+  return `https://www.${domain}/producto/${slug}?ref=mercant`
 }
 
 function simulateLatency(): Promise<void> {

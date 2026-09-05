@@ -9,6 +9,7 @@
 import type { ProductQuery, RawOffer } from '@/types'
 import { BaseConnector, type ConnectorConfig } from './base'
 import { matchSuppliersForQuery, estimateCategoryPrice } from './supplier_database'
+import { resolveDirectProductUrl } from './direct_product_resolver'
 
 export class UniversalWebConnector extends BaseConnector {
   readonly config: ConnectorConfig = {
@@ -52,7 +53,12 @@ export class UniversalWebConnector extends BaseConnector {
         query.model ?? undefined,
         idx,
       )
-      const directUrl = supplier.buildUrl(cleanSearchQuery, query.brand ?? undefined, query.model ?? undefined)
+      const directUrl = resolveDirectProductUrl(
+        supplier.domain,
+        query.name,
+        query.brand ?? undefined,
+        query.model ?? undefined,
+      )
 
       return this.buildRawOffer({
         title: `${cleanSearchQuery} — ${supplier.name}`,

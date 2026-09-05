@@ -1,4 +1,5 @@
 import { matchSuppliersForQuery, estimateCategoryPrice } from './supplier_database'
+import { resolveDirectProductUrl } from './direct_product_resolver'
 import { calculateTrustScore } from '@/lib/scoring/trust'
 import { calculateBuyingScore } from '@/lib/scoring/buying'
 import { generateAlerts } from '@/lib/scoring/alerts'
@@ -30,7 +31,7 @@ export function generateOffersForItem(item: any, priorityMode: PriorityMode = 'B
 
   const rawOffers: any[] = suppliers.map((supplier, idx) => {
     const { price } = estimateCategoryPrice(name, brand, model, idx)
-    const directUrl = supplier.buildUrl(cleanSearchQuery, brand, model)
+    const directUrl = resolveDirectProductUrl(supplier.domain, name, brand, model)
     const shippingCost = idx === 0 || idx === 1 ? 0 : 150
 
     return {
