@@ -38,14 +38,120 @@ Rules:
 - Never invent specs or brands that are not in the text.
 - Return ONLY JSON.`
 
-function heuristicParse(text: string): ProductQuery[] {
+export function heuristicParse(text: string): ProductQuery[] {
   const lines = text
     .split(/\r?\n/)
     .map((l) => l.trim())
     .filter((l) => l.length > 0 && !l.startsWith('#'))
 
-  return lines.map((line, idx) => {
-    // Check patterns like: "100 x Dell P2422H", "50 laptops", "200x sillas"
+  const items: ProductQuery[] = []
+
+  const isHeaderLine = (line: string): boolean => {
+    const l = line.toLowerCase()
+    return (
+      (l.includes('producto') || l.includes('artículo') || l.includes('item')) &&
+      (l.includes('cantidad') || l.includes('marca') || l.includes('modelo') || l.includes('specs') || l.includes('especificaciones'))
+    )
+  }
+
+  for (let idx = 0; idx < lines.length; idx++) {
+    const line = lines[idx]
+    if (isHeaderLine(line) || /^[-|\s:]+$/.test(line)) {
+      continue // Skip header or divider line
+    }
+
+    // Check delimiter: pipe (|), tab (\t), or semicolon (;)
+    let delimiter: string | null = null
+    if (line.includes('|')) delimiter = '|'
+    else if (line.includes('\t')) delimiter = '\t'
+    else if (line.includes(';') && (line.match(/;/g)?.length || 0) >= 2) delimiter = ';'
+
+    if (delimiter) {
+      const cols = line
+        .split(delimiter)
+        .map((c) => c.trim())
+        .filter((c, i, arr) => !(i === 0 && c === '') && !(i === arr.length - 1 && c === ''))
+
+      if (cols.length >= 2) {
+        let name = cols[0] || 'Producto'
+        let brand: string | undefined
+        let model: string | undefined
+        let quantity = 1
+        let specifications: string | undefined
+
+        const cleanVal = (val?: string) => {
+          if (!val) return undefined
+          const v = val.trim()
+          if (v === '—' || v === '-' || v === 'N/A' || v === 'n/a' || v === 'null' || v === 'none' || v === '') {
+            return undefined
+          }
+          return v
+        }
+
+        if (cols.length >= 5) {
+          // Format: Producto | Marca | Modelo / SKU | Cantidad | Especificaciones
+          name = cols[0]
+          brand = cleanVal(cols[1])
+          model = cleanVal(cols[2])
+          const parsedQty = parseInt(cols[3].replace(/[^\d]/g, ''), 10)
+          if (!isNaN(parsedQty) && parsedQty > 0) quantity = parsedQty
+          specifications = cleanVal(cols[4])
+        } else if (cols.length === 4) {
+          name = cols[0]
+          brand = cleanVal(cols[1])
+          const possibleQty = parseInt(cols[3].replace(/[^\d]/g, ''), 10)
+          const possibleQtyCol2 = parseInt(cols[2].replace(/[^\d]/g, ''), 10)
+          if (!isNaN(possibleQty) && possibleQty > 0) {
+            model = cleanVal(cols[2])
+            quantity = possibleQty
+          } else if (!isNaN(possibleQtyCol2) && possibleQtyCol2 > 0) {
+            quantity = possibleQtyCol2
+            specifications = cleanVal(cols[3])
+          } else {
+            model = cleanVal(cols[2])
+            specifications = cleanVal(cols[3])
+          }
+        } else if (cols.length === 3) {
+          name = cols[0]
+          const possibleQty = parseInt(cols[1].replace(/[^\d]/g, ''), 10)
+          if (!isNaN(possibleQty) && possibleQty > 0) {
+            quantity = possibleQty
+            specifications = cleanVal(cols[2])
+          } else {
+            brand = cleanVal(cols[1])
+            const qty2 = parseInt(cols[2].replace(/[^\d]/g, ''), 10)
+            if (!isNaN(qty2) && qty2 > 0) quantity = qty2
+            else specifications = cleanVal(cols[2])
+          }
+        } else if (cols.length === 2) {
+          name = cols[0]
+          const possibleQty = parseInt(cols[1].replace(/[^\d]/g, ''), 10)
+          if (!isNaN(possibleQty) && possibleQty > 0) quantity = possibleQty
+          else specifications = cleanVal(cols[1])
+        }
+
+        let fullTitle = name
+        if (brand && !fullTitle.toLowerCase().includes(brand.toLowerCase())) {
+          fullTitle = `${fullTitle} ${brand}`
+        }
+        if (model && !fullTitle.toLowerCase().includes(model.toLowerCase())) {
+          fullTitle = `${fullTitle} ${model}`
+        }
+
+        items.push({
+          id: `item-${Date.now()}-${idx}`,
+          name: fullTitle.trim(),
+          brand,
+          model,
+          quantity,
+          currency: 'MXN',
+          specifications,
+        })
+        continue
+      }
+    }
+
+    // Natural language fallback
     let qty = 1
     let rest = line
 
@@ -55,8 +161,11 @@ function heuristicParse(text: string): ProductQuery[] {
       rest = matchQty[2].trim()
     }
 
-    // Detect common brands
-    const brands = ['Lenovo', 'Dell', 'HP', 'Logitech', 'Apple', 'Asus', 'Acer', 'Samsung', 'LG', 'Herman Miller', 'Steelcase', 'Sony']
+    const brands = [
+      'Lenovo', 'Dell', 'HP', 'Logitech', 'Apple', 'Asus', 'Acer',
+      'Samsung', 'LG', 'Herman Miller', 'Steelcase', 'Sony', 'TP-Link',
+      'Microsoft', 'APC', 'Cisco', 'Ubiquiti', 'Epson', 'Canon'
+    ]
     let foundBrand: string | undefined
     for (const b of brands) {
       if (new RegExp(`\\b${b}\\b`, 'i').test(rest)) {
@@ -65,15 +174,17 @@ function heuristicParse(text: string): ProductQuery[] {
       }
     }
 
-    return {
+    items.push({
       id: `item-${Date.now()}-${idx}`,
       name: rest,
       brand: foundBrand,
       quantity: qty,
       currency: 'MXN',
       specifications: undefined,
-    }
-  })
+    })
+  }
+
+  return items
 }
 
 export async function parseProductList(text: string): Promise<ParsedProductList> {

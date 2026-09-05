@@ -18,10 +18,18 @@ import {
   Layers,
 } from 'lucide-react'
 
-const DEFAULT_SAMPLE_TEXT = `50 laptops Lenovo ThinkPad E14
-100 x Logitech MX Master 3S
-200 sillas ergonómicas negras
-30 monitores 24"`
+const DEFAULT_SAMPLE_TEXT = `Computadora de escritorio | Dell | OptiPlex 7020 | 50 | Intel Core i5, 16 GB RAM, SSD 512 GB, Windows 11 Pro
+Monitor | Dell | P2425H | 50 | 24", Full HD, IPS, HDMI/DisplayPort
+Teclado | Dell | KB216 | 50 | USB, distribución español
+Mouse | Dell | MS116 | 50 | USB, óptico
+Regulador | APC | BVX900 | 50 | 900 VA, protección contra sobretensiones
+Servidor | Dell | PowerEdge T150 | 2 | Intel Xeon, 32 GB RAM, 1 TB SSD
+Switch | TP-Link | TL-SG1048 | 2 | 48 puertos Gigabit Ethernet
+Router | TP-Link | ER7206 | 1 | Gigabit, VPN, administración empresarial
+Licencia de sistema operativo | Microsoft | Windows 11 Pro | 50 | Licencia por equipo
+Suite ofimática | Microsoft | Microsoft 365 Business | 50 | Aplicaciones Office, almacenamiento en la nube
+Instalación y configuración | — | — | 1 | Configuración de equipos, red y software
+Cableado de red | — | Cat6 | 1 | Instalación y configuración para 50 equipos`
 
 export default function NewProcurementPage() {
   const router = useRouter()
