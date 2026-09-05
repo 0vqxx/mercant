@@ -902,10 +902,13 @@ export function matchSuppliersForQuery(
     (s) => s.category === bestCategory || s.category === 'general' || s.id === 'sup-tech-001' || s.id === 'sup-tech-002',
   )
 
-  const ranked = categorySuppliers.map((sup) => {
-    let matchRank = sup.trustBaseline
-    for (const kw of sup.keywords) {
-      if (fullText.includes(kw.toLowerCase())) {
+  const pool = categorySuppliers.length >= 4 ? categorySuppliers : ALL_SUPPLIERS.slice(0, 10)
+
+  const ranked = pool.map((sup) => {
+    let matchRank = sup.trustBaseline || 90
+    const kws = Array.isArray(sup.keywords) ? sup.keywords : []
+    for (const kw of kws) {
+      if (typeof kw === 'string' && fullText.includes(kw.toLowerCase())) {
         matchRank += 15
       }
     }
@@ -913,11 +916,15 @@ export function matchSuppliersForQuery(
   })
 
   ranked.sort((a, b) => b.rank - a.rank)
-  const selected = ranked.slice(0, limit).map((r) => r.supplier)
+  let selected = ranked.slice(0, limit).map((r) => r.supplier)
+
+  if (selected.length === 0) {
+    selected = MASTER_SUPPLIER_CATALOG.slice(0, Math.min(limit, MASTER_SUPPLIER_CATALOG.length))
+  }
 
   return {
     category: bestCategory,
-    categoryLabel: CATEGORY_METADATA[bestCategory].label,
+    categoryLabel: CATEGORY_METADATA[bestCategory]?.label || 'General',
     suppliers: selected,
   }
 }
