@@ -1,4 +1,4 @@
-﻿/**
+/**
  * ProcureAI — Auth Helpers
  *
  * Server-side helpers for retrieving and requiring authentication.
@@ -8,7 +8,7 @@
 
 import { getServerSession } from 'next-auth'
 import { redirect } from 'next/navigation'
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+import { authOptions } from '@/lib/authOptions'
 
 // ---------------------------------------------------------------------------
 // requireAuth — redirect to /login if the user is not authenticated

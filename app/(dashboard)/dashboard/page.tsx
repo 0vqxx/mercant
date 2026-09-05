@@ -2,7 +2,7 @@ import React from 'react'
 import Link from 'next/link'
 import { prisma } from '@/lib/db'
 import { getServerSession } from 'next-auth'
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+import { authOptions } from '@/lib/authOptions'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import {
   PlusCircle,
