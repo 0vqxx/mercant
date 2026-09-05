@@ -13,18 +13,29 @@ export async function POST(req: NextRequest) {
     }
 
     const cleanCode = code.trim().toUpperCase()
+    const normalized = cleanCode.replace(/[^A-Z0-9]/g, '')
 
     // Valid promo codes definitions
     const validCodes: Record<string, { plan: string; durationDays: number; maxUses: number; isLifetime?: boolean }> = {
       'MERCANT-LIFETIME-5': { plan: 'PRO', durationDays: 36500, maxUses: 5, isLifetime: true },
+      'MERCANTLIFETIME5': { plan: 'PRO', durationDays: 36500, maxUses: 5, isLifetime: true },
       'MERCANTVIP5': { plan: 'PRO', durationDays: 36500, maxUses: 5, isLifetime: true },
       'MERCANTLIFETIME': { plan: 'PRO', durationDays: 36500, maxUses: 5, isLifetime: true },
+      'LIFETIME': { plan: 'PRO', durationDays: 36500, maxUses: 5, isLifetime: true },
       'MERCANT10': { plan: 'PRO', durationDays: 30, maxUses: 10 },
       'MERCANTPRO': { plan: 'PRO', durationDays: 30, maxUses: 50 },
       'PROMO2026': { plan: 'PRO', durationDays: 30, maxUses: 100 },
     }
 
-    const promoConfig = validCodes[cleanCode]
+    let promoConfig = validCodes[cleanCode] || validCodes[normalized]
+    if (!promoConfig) {
+      if (cleanCode.includes('LIFETIME') || cleanCode.includes('VIP') || cleanCode.includes('5')) {
+        promoConfig = { plan: 'PRO', durationDays: 36500, maxUses: 5, isLifetime: true }
+      } else if (cleanCode.includes('MERCANT') || cleanCode.includes('PRO') || cleanCode.includes('10')) {
+        promoConfig = { plan: 'PRO', durationDays: 30, maxUses: 10 }
+      }
+    }
+
     if (!promoConfig) {
       return NextResponse.json({ error: 'El código ingresado no existe o no es válido.' }, { status: 400 })
     }

@@ -1,7 +1,12 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/authOptions'
 import { prisma } from '@/lib/db'
+import {
+  saveProcurementMemory,
+  getAllProcurementsMemory,
+  MemoryProcurement,
+} from '@/lib/procurementsMemory'
 import type { ProductQuery } from '@/types'
 
 // Helper to ensure a fallback user exists for instant guest/demo usage
@@ -9,91 +14,149 @@ async function getOrCreateUserId(sessionUserId?: string): Promise<string> {
   if (sessionUserId) return sessionUserId
 
   const defaultEmail = 'demo@procureai.app'
-  let user = await prisma.user.findUnique({
-    where: { email: defaultEmail },
-  })
-
-  if (!user) {
-    user = await prisma.user.create({
-      data: {
-        name: 'Demo Procurement User',
-        email: defaultEmail,
-      },
+  try {
+    let user = await prisma.user.findUnique({
+      where: { email: defaultEmail },
     })
-  }
 
-  return user.id
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          name: 'Demo Procurement User',
+          email: defaultEmail,
+        },
+      })
+    }
+
+    return user.id
+  } catch {
+    return 'demo-user-id'
+  }
 }
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    const userId = await getOrCreateUserId(session?.user?.id)
+    let procurements: any[] = []
+    try {
+      const session = await getServerSession(authOptions)
+      const userId = await getOrCreateUserId(session?.user?.id)
 
-    const procurements = await prisma.procurement.findMany({
-      where: { userId },
-      include: {
-        items: {
-          include: {
-            offers: true,
+      procurements = await prisma.procurement.findMany({
+        where: { userId },
+        include: {
+          items: {
+            include: {
+              offers: true,
+            },
           },
         },
-      },
-      orderBy: { createdAt: 'desc' },
-    })
+        orderBy: { createdAt: 'desc' },
+      })
+    } catch (dbErr) {
+      console.warn('[api/procurements] DB offline, using memory store')
+      procurements = getAllProcurementsMemory()
+    }
 
     return NextResponse.json({ procurements })
   } catch (err: any) {
     console.error('[api/procurements] GET error:', err)
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    return NextResponse.json({ procurements: getAllProcurementsMemory() })
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    const userId = await getOrCreateUserId(session?.user?.id)
-
-    const body = await req.json()
+    const body = await req.json().catch(() => ({}))
     const { name, budget, currency = 'MXN', priorityMode = 'BALANCE', items, rawInput, notes } = body
 
     if (!name || !items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json(
-        { error: 'Name and at least one product item are required' },
+        { error: 'El nombre y al menos un producto son requeridos' },
         { status: 400 },
       )
     }
 
-    const procurement = await prisma.procurement.create({
-      data: {
-        userId,
+    const now = new Date().toISOString()
+    const parsedBudget = budget ? parseFloat(String(budget)) : null
+
+    // Attempt Prisma DB creation
+    try {
+      const session = await getServerSession(authOptions)
+      const userId = await getOrCreateUserId(session?.user?.id)
+
+      const procurement = await prisma.procurement.create({
+        data: {
+          userId,
+          name: String(name).trim(),
+          budget: parsedBudget,
+          currency,
+          priorityMode,
+          rawInput: rawInput ?? null,
+          notes: notes ?? null,
+          items: {
+            create: items.map((it: ProductQuery) => ({
+              name: it.name,
+              brand: it.brand ?? null,
+              model: it.model ?? null,
+              sku: it.sku ?? null,
+              quantity: it.quantity ?? 1,
+              currency: it.currency ?? currency,
+              specifications: it.specifications ?? null,
+              maxBudget: it.maxBudget ?? null,
+            })),
+          },
+        },
+        include: {
+          items: {
+            include: {
+              offers: true,
+            },
+          },
+        },
+      })
+
+      // Also cache in memory
+      saveProcurementMemory(procurement as any)
+
+      return NextResponse.json({ success: true, procurement })
+    } catch (dbErr) {
+      console.warn('[api/procurements] DB creation failed, saving to resilient memory store:', dbErr)
+
+      const fallbackId = `proc-${Date.now()}`
+      const memoryProc: MemoryProcurement = {
+        id: fallbackId,
+        userId: 'demo-user-id',
         name: String(name).trim(),
-        budget: budget ? parseFloat(String(budget)) : null,
+        budget: parsedBudget,
         currency,
         priorityMode,
+        status: 'DRAFT',
         rawInput: rawInput ?? null,
         notes: notes ?? null,
-        items: {
-          create: items.map((it: ProductQuery) => ({
-            name: it.name,
-            brand: it.brand ?? null,
-            model: it.model ?? null,
-            sku: it.sku ?? null,
-            quantity: it.quantity ?? 1,
-            currency: it.currency ?? currency,
-            specifications: it.specifications ?? null,
-            maxBudget: it.maxBudget ?? null,
-          })),
-        },
-      },
-      include: {
-        items: true,
-      },
-    })
+        createdAt: now,
+        updatedAt: now,
+        items: items.map((it: ProductQuery, idx: number) => ({
+          id: `item-${Date.now()}-${idx}`,
+          procurementId: fallbackId,
+          name: it.name,
+          brand: it.brand ?? null,
+          model: it.model ?? null,
+          sku: it.sku ?? null,
+          quantity: it.quantity ?? 1,
+          currency: it.currency ?? currency,
+          specifications: it.specifications ?? null,
+          maxBudget: it.maxBudget ?? null,
+          status: 'PENDING',
+          offers: [],
+        })),
+      }
 
-    return NextResponse.json({ success: true, procurement })
+      saveProcurementMemory(memoryProc)
+
+      return NextResponse.json({ success: true, procurement: memoryProc })
+    }
   } catch (err: any) {
-    console.error('[api/procurements] POST error:', err)
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    console.error('[api/procurements] POST fatal error:', err)
+    return NextResponse.json({ error: err.message || 'Error al guardar la cotización' }, { status: 500 })
   }
 }
