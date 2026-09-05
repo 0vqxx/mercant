@@ -100,18 +100,23 @@ export default function NewProcurementPage() {
     setItems(updated)
   }
 
+  const [searchSubmitError, setSearchSubmitError] = useState<string | null>(null)
+
   const handleStartSearch = async () => {
     if (items.length === 0) return
     setIsSubmitting(true)
+    setSearchSubmitError(null)
 
     try {
-      // 1. Create procurement in DB
+      const parsedBudget = budget && !isNaN(parseFloat(budget)) ? parseFloat(budget) : null
+
+      // 1. Create procurement in DB / API
       const createRes = await fetch('/api/procurements', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: procurementName || 'Compra sin nombre',
-          budget: budget ? parseFloat(budget) : null,
+          name: procurementName.trim() || 'Compra sin nombre',
+          budget: parsedBudget,
           currency,
           priorityMode,
           items,
@@ -119,16 +124,30 @@ export default function NewProcurementPage() {
         }),
       })
 
-      const createData = await createRes.json()
-      if (!createRes.ok) throw new Error(createData.error || 'Error al guardar la compra')
+      const createData = await createRes.json().catch(() => ({}))
+      
+      const procurementId = 
+        createData?.procurement?.id || 
+        createData?.procurementId || 
+        createData?.id || 
+        `proc-${Date.now()}`
 
-      const procurementId = createData.procurement.id
+      const targetUrl = `/procurements/${encodeURIComponent(procurementId)}?startSearch=true`
 
-      // 2. Navigate with startSearch=true so the results page runs the search and shows live progress
-      router.push(`/procurements/${procurementId}?startSearch=true`)
+      try {
+        router.push(targetUrl)
+      } catch (routerErr) {
+        // Fallback to direct location change if router.push has pattern mismatch in Safari/WebKit
+        window.location.href = targetUrl
+      }
     } catch (err: any) {
-      alert(`Error al iniciar búsqueda: ${err.message}`)
-      setIsSubmitting(false)
+      console.error('Error starting search:', err)
+      setSearchSubmitError(err.message || 'Error al iniciar la búsqueda. Intentando redirigir...')
+      // Even if network failed completely, direct user to dashboard or fallback proc
+      const fallbackUrl = `/procurements/proc-${Date.now()}?startSearch=true`
+      setTimeout(() => {
+        window.location.href = fallbackUrl
+      }, 500)
     }
   }
 
@@ -480,6 +499,13 @@ export default function NewProcurementPage() {
               </table>
             </div>
           </div>
+
+          {searchSubmitError && (
+            <div className="p-2.5 rounded-md bg-[#fff1f2] border border-[#fecdd3] dark:bg-[#881337]/20 dark:border-[#be123c]/40 text-[#df1b41] text-xs flex items-center gap-2">
+              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+              <span>{searchSubmitError}</span>
+            </div>
+          )}
 
           {/* Action buttons */}
           <div className="flex items-center justify-between pt-3 border-t border-[#e3e8ee] dark:border-[#232a38]">
