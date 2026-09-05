@@ -1,6 +1,7 @@
-﻿import React from 'react'
+'use client'
+
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { prisma } from '@/lib/db'
 import { formatCurrency } from '@/lib/utils'
 import {
   Building2,
@@ -14,19 +15,27 @@ import {
   ArrowUpRight,
 } from 'lucide-react'
 
-export const dynamic = 'force-dynamic'
+export default function SuppliersPage() {
+  const [procurements, setProcurements] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
-export default async function SuppliersPage() {
-  const offers = await prisma.normalizedOffer.findMany({
-    include: {
-      item: {
-        include: {
-          procurement: true,
-        },
-      },
-    },
-    orderBy: { createdAt: 'desc' },
-  })
+  useEffect(() => {
+    fetch('/api/procurements')
+      .then((res) => (res.ok ? res.json() : { procurements: [] }))
+      .then((data) => {
+        setProcurements(data.procurements || [])
+      })
+      .catch((err) => {
+        console.warn('[SuppliersPage] Notice:', err)
+        setProcurements([])
+      })
+      .finally(() => setLoading(false))
+  }, [])
+
+  // Flatten offers from procurements
+  const offers = procurements.flatMap((p: any) =>
+    (p.items || []).flatMap((item: any) => item.offers || [])
+  )
 
   // Group by supplier name
   const suppliersMap: Record<
@@ -52,20 +61,20 @@ export default async function SuppliersPage() {
         domain: offer.supplierDomain || (sName.toLowerCase().replace(/\s+/g, '') + '.com.mx'),
         offersCount: 0,
         trustSum: 0,
-        minPrice: offer.unitPrice,
-        maxPrice: offer.unitPrice,
+        minPrice: offer.unitPrice || 0,
+        maxPrice: offer.unitPrice || 0,
         totalSpendTracked: 0,
-        latestUrl: offer.sourceUrl,
-        isDemo: offer.isDemo,
+        latestUrl: offer.sourceUrl || '#',
+        isDemo: offer.isDemo || false,
       }
     }
 
     const s = suppliersMap[sName]
     s.offersCount += 1
     s.trustSum += offer.trustScore ?? 80
-    s.minPrice = Math.min(s.minPrice, offer.unitPrice)
-    s.maxPrice = Math.max(s.maxPrice, offer.unitPrice)
-    s.totalSpendTracked += offer.totalPrice
+    s.minPrice = Math.min(s.minPrice, offer.unitPrice || 0)
+    s.maxPrice = Math.max(s.maxPrice, offer.unitPrice || 0)
+    s.totalSpendTracked += offer.totalPrice || 0
   }
 
   const suppliers = Object.values(suppliersMap).map((s) => ({

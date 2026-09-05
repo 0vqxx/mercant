@@ -1,6 +1,7 @@
-﻿import React from 'react'
+'use client'
+
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { prisma } from '@/lib/db'
 import { formatCurrency } from '@/lib/utils'
 import {
   PieChart as PieIcon,
@@ -14,19 +15,22 @@ import {
 } from 'lucide-react'
 import { DashboardCharts } from '@/components/analytics/DashboardCharts'
 
-export const dynamic = 'force-dynamic'
+export default function AnalyticsPage() {
+  const [procurements, setProcurements] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
-export default async function AnalyticsPage() {
-  const procurements = await prisma.procurement.findMany({
-    include: {
-      items: {
-        include: {
-          offers: true,
-        },
-      },
-    },
-    orderBy: { createdAt: 'desc' },
-  })
+  useEffect(() => {
+    fetch('/api/procurements')
+      .then((res) => (res.ok ? res.json() : { procurements: [] }))
+      .then((data) => {
+        setProcurements(data.procurements || [])
+      })
+      .catch((err) => {
+        console.warn('[AnalyticsPage] Notice:', err)
+        setProcurements([])
+      })
+      .finally(() => setLoading(false))
+  }, [])
 
   let totalEstimatedSpend = 0
   let totalMaxSpend = 0
@@ -35,11 +39,11 @@ export default async function AnalyticsPage() {
   const supplierStatsMap: Record<string, { spend: number; count: number; trustSum: number }> = {}
 
   for (const proc of procurements) {
-    for (const item of proc.items) {
+    for (const item of proc.items || []) {
       totalItemsCount++
-      const sortedOffers = [...item.offers].sort((a, b) => (b.buyingScore ?? 0) - (a.buyingScore ?? 0))
+      const sortedOffers = [...(item.offers || [])].sort((a, b) => (b.buyingScore ?? 0) - (a.buyingScore ?? 0))
       const bestOffer = sortedOffers[0]
-      const worstOffer = [...item.offers].sort((a, b) => b.totalPrice - a.totalPrice)[0]
+      const worstOffer = [...(item.offers || [])].sort((a, b) => b.totalPrice - a.totalPrice)[0]
 
       if (bestOffer) {
         totalEstimatedSpend += bestOffer.totalPrice
@@ -52,7 +56,7 @@ export default async function AnalyticsPage() {
         supplierStatsMap[sName].trustSum += bestOffer.trustScore ?? 85
 
         // Category heuristic
-        const lower = item.name.toLowerCase()
+        const lower = (item.name || '').toLowerCase()
         const cat = lower.includes('laptop') || lower.includes('computadora') || lower.includes('thinkpad')
           ? 'Cómputo & Laptops'
           : lower.includes('monitor') || lower.includes('pantalla')
