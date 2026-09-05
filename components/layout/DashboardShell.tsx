@@ -21,8 +21,30 @@ import { cn } from '@/lib/utils'
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [isProPlan, setIsProPlan] = useState(false)
   const pathname = usePathname()
   const { t } = useLanguage()
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const plan = localStorage.getItem('mercant-plan')
+      if (plan === 'PRO' || plan === 'ENTERPRISE') {
+        setIsProPlan(true)
+      }
+    }
+
+    const onPlanUpdate = (e: any) => {
+      const p = e?.detail?.plan
+      if (p === 'PRO' || p === 'ENTERPRISE') {
+        setIsProPlan(true)
+      }
+    }
+
+    window.addEventListener('mercant-plan-updated', onPlanUpdate)
+    return () => {
+      window.removeEventListener('mercant-plan-updated', onPlanUpdate)
+    }
+  }, [])
 
   const mobileNavItems = [
     { href: '/dashboard', label: 'Resumen', icon: LayoutDashboard },
@@ -102,13 +124,25 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             </Link>
 
             <div className="flex items-center gap-1 text-[#697386] dark:text-[#8792a2]">
-              <Link
-                href="/settings?tab=billing"
-                className="hidden sm:inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-semibold bg-[#635bff]/10 text-[#635bff] dark:text-[#7a73ff] hover:bg-[#635bff]/20 transition-colors"
-              >
-                <Sparkles className="w-3 h-3" />
-                <span>PRO</span>
-              </Link>
+              {isProPlan ? (
+                <Link
+                  href="/settings?tab=billing"
+                  className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#052e16] text-[#4ade80] border border-[#14532d] shadow-xs"
+                  title="Plan PRO Unlimited Activo"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#4ade80] animate-pulse" />
+                  <span>PRO ACTIVO</span>
+                </Link>
+              ) : (
+                <Link
+                  href="/settings?tab=billing"
+                  className="hidden sm:inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-semibold bg-[#635bff]/10 text-[#635bff] dark:text-[#7a73ff] hover:bg-[#635bff]/20 transition-colors"
+                  title="Mejorar a Plan PRO"
+                >
+                  <Sparkles className="w-3 h-3" />
+                  <span>PRO</span>
+                </Link>
+              )}
               <button
                 type="button"
                 className="p-1.5 rounded hover:bg-[#f4f6f8] dark:hover:bg-[#121826] text-[#697386] dark:text-slate-400 hover:text-[#0a2540] dark:hover:text-white transition-colors cursor-pointer"

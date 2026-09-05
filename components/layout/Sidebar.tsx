@@ -44,6 +44,28 @@ export function Sidebar({ isOpen, onClose, isMobileDrawer = false }: SidebarProp
 
   const [supabaseUser, setSupabaseUser] = useState<any>(null)
   const [imageError, setImageError] = useState(false)
+  const [isProPlan, setIsProPlan] = useState(false)
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const plan = localStorage.getItem('mercant-plan')
+      if (plan === 'PRO' || plan === 'ENTERPRISE') {
+        setIsProPlan(true)
+      }
+    }
+
+    const onPlanUpdate = (e: any) => {
+      const p = e?.detail?.plan
+      if (p === 'PRO' || p === 'ENTERPRISE') {
+        setIsProPlan(true)
+      }
+    }
+
+    window.addEventListener('mercant-plan-updated', onPlanUpdate)
+    return () => {
+      window.removeEventListener('mercant-plan-updated', onPlanUpdate)
+    }
+  }, [])
 
   useEffect(() => {
     let isMounted = true
@@ -123,7 +145,13 @@ export function Sidebar({ isOpen, onClose, isMobileDrawer = false }: SidebarProp
       title: t('financeControl'),
       items: [
         { href: '/analytics', label: t('savingsReport'), icon: PieChart },
-        { href: '/settings?tab=billing', label: t('upgradeToProMenu'), icon: Sparkles, badge: 'PRO' },
+        {
+          href: '/settings?tab=billing',
+          label: isProPlan ? 'Plan Pro (Activo)' : t('upgradeToProMenu'),
+          icon: Sparkles,
+          badge: isProPlan ? 'ACTIVO' : 'PRO',
+          badgeActive: isProPlan,
+        },
         { href: '/settings', label: t('settingsAlerts'), icon: Sliders },
         { href: '/support', label: t('supportDesk'), icon: LifeBuoy },
       ],
@@ -207,9 +235,14 @@ export function Sidebar({ isOpen, onClose, isMobileDrawer = false }: SidebarProp
                     />
                     <span>{item.label}</span>
                   </div>
-                  {item.badge && (
-                    <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-[#f4f6f8] dark:bg-[#1a2236] text-[#635bff] dark:text-[#7a73ff] border border-[#e3e8ee] dark:border-[#2e3748]">
-                      {item.badge}
+                  {(item as any).badge && (
+                    <span className={cn(
+                      'text-[10px] font-bold px-1.5 py-0.2 rounded border',
+                      (item as any).badgeActive
+                        ? 'bg-[#052e16] text-[#4ade80] border-[#14532d]'
+                        : 'bg-[#f4f6f8] dark:bg-[#1a2236] text-[#635bff] dark:text-[#7a73ff] border-[#e3e8ee] dark:border-[#2e3748]'
+                    )}>
+                      {(item as any).badge}
                     </span>
                   )}
                 </Link>

@@ -202,12 +202,28 @@ function SettingsContent() {
   } | null>(null)
 
   const loadBilling = () => {
+    if (typeof window !== 'undefined') {
+      const storedPlan = localStorage.getItem('mercant-plan')
+      if (storedPlan === 'PRO' || storedPlan === 'ENTERPRISE') {
+        setUserPlan(storedPlan as 'PRO' | 'ENTERPRISE')
+      }
+    }
+
     fetch('/api/billing')
       .then((res) => res.json())
       .then((data) => {
         if (data.email) {
+          const storedPlan = typeof window !== 'undefined' ? localStorage.getItem('mercant-plan') : null
+          const effectivePlan = (storedPlan === 'PRO' || storedPlan === 'ENTERPRISE') ? storedPlan : (data.plan || 'FREE')
+          const isPro = effectivePlan === 'PRO' || effectivePlan === 'ENTERPRISE'
+
+          data.plan = effectivePlan
+          if (isPro) {
+            data.isActive = true
+            data.quotesTotal = 1000
+          }
           setBillingData(data)
-          setUserPlan(data.plan)
+          setUserPlan(effectivePlan as 'FREE' | 'PRO' | 'ENTERPRISE')
         }
       })
       .catch(() => {})
@@ -215,6 +231,27 @@ function SettingsContent() {
 
   useEffect(() => {
     loadBilling()
+
+    const handlePlanUpdate = (e: any) => {
+      const detail = e.detail || {}
+      const newPlan = detail.plan || 'PRO'
+      setUserPlan(newPlan)
+      setBillingData((prev) =>
+        prev
+          ? { ...prev, plan: newPlan, isActive: true, quotesTotal: 1000 }
+          : null
+      )
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('mercant-plan-updated', handlePlanUpdate)
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('mercant-plan-updated', handlePlanUpdate)
+      }
+    }
   }, [])
 
   const handleApplyPromo = async (e?: React.FormEvent, customCode?: string) => {
@@ -230,6 +267,38 @@ function SettingsContent() {
       ? '¡Código MERCANT-LIFETIME-5 canjeado con éxito! ¡Plan PRO Unlimited ACTIVADO DE POR VIDA (Lifetime ♾️)!'
       : '¡Código MERCANT10 canjeado con éxito! Plan PRO activado por 30 días.'
 
+    // Reactively update local state and broadcast immediately
+    setUserPlan('PRO')
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('mercant-plan', 'PRO')
+        localStorage.setItem('mercant-plan-lifetime', isLifetime ? 'true' : 'false')
+        window.dispatchEvent(new CustomEvent('mercant-plan-updated', { detail: { plan: 'PRO', isLifetime } }))
+      } catch {}
+    }
+
+    setBillingData((prev) => {
+      const newHistoryItem = {
+        id: `promo-${Date.now()}`,
+        code: codeToUse,
+        plan: 'PRO Unlimited',
+        date: new Date().toISOString(),
+      }
+      const existingHistory = prev?.history || []
+      return {
+        email: prev?.email || profileForm.email || 'andresquintanaort@gmail.com',
+        name: prev?.name || profileForm.fullName || 'Andres Quintana',
+        plan: 'PRO',
+        planExpiresAt: isLifetime ? null : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        isActive: true,
+        quotesUsed: prev?.quotesUsed ?? 0,
+        quotesTotal: 1000,
+        itemsCount: prev?.itemsCount ?? 0,
+        percentUsed: 0,
+        history: [newHistoryItem, ...existingHistory.filter((h) => h.code !== codeToUse)],
+      }
+    })
+
     try {
       const res = await fetch('/api/billing/promo', {
         method: 'POST',
@@ -240,53 +309,9 @@ function SettingsContent() {
       
       const successText = data.message || fallbackMessage
       setPromoSuccess(successText)
-      setUserPlan('PRO')
-
-      if (typeof window !== 'undefined') {
-        try {
-          localStorage.setItem('mercant-plan', 'PRO')
-          localStorage.setItem('mercant-plan-lifetime', isLifetime ? 'true' : 'false')
-        } catch {}
-      }
-
       setPromoCode('')
-      setBillingData((prev) =>
-        prev
-          ? {
-              ...prev,
-              plan: 'PRO',
-              isActive: true,
-              quotesTotal: 1000,
-              planExpiresAt: isLifetime ? null : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-            }
-          : {
-              email: profileForm.email || 'andresquintanaort@gmail.com',
-              name: profileForm.fullName || 'Andres Quintana',
-              plan: 'PRO',
-              planExpiresAt: isLifetime ? null : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-              isActive: true,
-              quotesUsed: 0,
-              quotesTotal: 1000,
-              itemsCount: 0,
-              percentUsed: 0,
-              history: [
-                {
-                  id: `promo-${Date.now()}`,
-                  code: codeToUse,
-                  plan: 'PRO Unlimited',
-                  date: new Date().toISOString(),
-                },
-              ],
-            }
-      )
     } catch {
       setPromoSuccess(fallbackMessage)
-      setUserPlan('PRO')
-      if (typeof window !== 'undefined') {
-        try {
-          localStorage.setItem('mercant-plan', 'PRO')
-        } catch {}
-      }
       setPromoCode('')
     } finally {
       setPromoLoading(false)
@@ -404,7 +429,7 @@ function SettingsContent() {
   const quotesTotal = billingData?.quotesTotal ?? 10
   const percentUsed = billingData?.percentUsed ?? Math.min(Math.round((quotesUsed / quotesTotal) * 100), 100)
   const userEmail = billingData?.email || profileForm.email || 'usuario@mercant.ai'
-  const isPlanActive = billingData?.isActive ?? (userPlan === 'PRO' || userPlan === 'ENTERPRISE')
+  const isPlanActive = userPlan === 'PRO' || userPlan === 'ENTERPRISE' || Boolean(billingData?.isActive)
 
   const invoices = (billingData?.history || []).map((h, idx) => {
     const rawDate = new Date(h.date)
@@ -980,7 +1005,11 @@ function SettingsContent() {
       {activeTab === 'billing' && (
         <div className="space-y-4">
           {/* Card 1: Top Usage Progress Alert */}
-          <div className="rounded-2xl border border-[#e3e8ee] dark:border-[#1e2430] bg-white dark:bg-[#0c1018] p-5 flex items-center justify-between gap-4">
+          <div className={`rounded-2xl border bg-white dark:bg-[#0c1018] p-5 flex items-center justify-between gap-4 transition-all ${
+            isPlanActive
+              ? 'border-emerald-500/40 bg-emerald-500/[0.02]'
+              : 'border-[#e3e8ee] dark:border-[#1e2430]'
+          }`}>
             <div className="flex items-center gap-4">
               {/* Circular SVG Ring Progress */}
               <div className="relative w-12 h-12 flex-shrink-0 flex items-center justify-center">
@@ -993,8 +1022,8 @@ function SettingsContent() {
                     d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                   />
                   <path
-                    className="text-[#635bff] dark:text-[#7f56d9]"
-                    strokeDasharray={`${percentUsed}, 100`}
+                    className={isPlanActive ? 'text-[#059669] dark:text-[#34d399]' : 'text-[#635bff] dark:text-[#7f56d9]'}
+                    strokeDasharray={isPlanActive ? '100, 100' : `${percentUsed}, 100`}
                     strokeLinecap="round"
                     strokeWidth="3.2"
                     stroke="currentColor"
@@ -1002,164 +1031,386 @@ function SettingsContent() {
                     d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                   />
                 </svg>
-                <span className="absolute text-[10px] font-bold text-[#635bff] dark:text-[#9e77ed]">{percentUsed}%</span>
+                <span className={`absolute text-[11px] font-bold ${isPlanActive ? 'text-[#059669] dark:text-[#34d399]' : 'text-[#635bff] dark:text-[#9e77ed]'}`}>
+                  {isPlanActive ? '♾️' : `${percentUsed}%`}
+                </span>
               </div>
 
               <div>
                 <h3 className="text-sm font-semibold text-[#0a2540] dark:text-white">
-                  Has usado {quotesUsed} de {quotesTotal} cotizaciones disponibles
+                  {isPlanActive
+                    ? 'Cotizaciones Ilimitadas Activas (Plan PRO Unlimited)'
+                    : `Has usado ${quotesUsed} de ${quotesTotal} cotizaciones disponibles`}
                 </h3>
                 <p className="text-xs text-[#697386] dark:text-[#8792a2] mt-0.5 max-w-xl leading-relaxed">
                   {isPlanActive
-                    ? `Plan PRO Ilimitado activo${billingData?.planExpiresAt ? ` (Vigente hasta ${new Date(billingData.planExpiresAt).toLocaleDateString()})` : ' (Vigencia de por vida ♾️)'}. Búsquedas web y cotizaciones en tiempo real.`
+                    ? `Plan PRO Ilimitado activo${billingData?.planExpiresAt ? ` (Vigente hasta ${new Date(billingData.planExpiresAt).toLocaleDateString()})` : ' (Vigencia de por vida ♾️)'}. Búsquedas web y cotizaciones en tiempo real en más de 500 distribuidores.`
                     : 'Mejora al plan Pro para desbloquear cotizaciones ilimitadas, rastreo web en distribuidores y soporte 24/7.'}
                 </p>
               </div>
             </div>
+
+            {isPlanActive && (
+              <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#052e16] text-[#4ade80] border border-[#14532d] shrink-0">
+                <span className="w-2 h-2 rounded-full bg-[#4ade80] animate-pulse" />
+                LIFETIME ♾️
+              </span>
+            )}
           </div>
 
-          {/* Card 2 & 3: 2-Column Row (Premium Plan + Payment Method) */}
+          {/* Section Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2">
+            <div>
+              <h2 className="text-base font-bold text-[#0a2540] dark:text-white">
+                Planes de Precios y Suscripción
+              </h2>
+              <p className="text-xs text-[#697386] dark:text-[#8792a2]">
+                Selecciona tu plan o canjea tu código de acceso para desbloquear cotizaciones ilimitadas en vivo.
+              </p>
+            </div>
+            {isPlanActive && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#052e16] text-[#4ade80] border border-[#14532d] self-start sm:self-auto shadow-xs">
+                <span className="w-2 h-2 rounded-full bg-[#4ade80] animate-pulse" />
+                Suscripción PRO Activa
+              </span>
+            )}
+          </div>
+
+          {/* 3-Column Pricing Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Column 1 & 2: Premium Plan Card */}
-            <div className="md:col-span-2 rounded-2xl border border-[#e3e8ee] dark:border-[#1e2430] bg-white dark:bg-[#0c1018] p-5 flex flex-col justify-between">
+            {/* 1. Starter Free Card */}
+            <div className={`rounded-2xl border bg-white dark:bg-[#0c1018] p-5 flex flex-col justify-between transition-all ${
+              !isPlanActive
+                ? 'border-[#635bff] dark:border-[#7f56d9] ring-2 ring-[#635bff]/10 shadow-sm'
+                : 'border-[#e3e8ee] dark:border-[#1e2430] opacity-85'
+            }`}>
               <div>
-                <div className="flex items-center justify-between pb-3">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-semibold text-[#0a2540] dark:text-white">
-                      {isPlanActive ? 'Plan Pro Unlimited' : 'Plan Starter (Free)'}
-                    </h3>
-                    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium ${isPlanActive ? 'bg-[#052e16] text-[#4ade80] border border-[#14532d]' : 'bg-[#f8fafc] dark:bg-[#121826] text-[#697386] dark:text-[#8792a2] border border-[#e3e8ee] dark:border-[#1e2430]'}`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${isPlanActive ? 'bg-[#4ade80] animate-pulse' : 'bg-[#94969c]'}`} />
-                      {isPlanActive ? 'Activo' : 'Base'}
-                    </span>
-                  </div>
-
-                  {!isPlanActive ? (
-                    <button
-                      type="button"
-                      onClick={() => handleCheckout('PRO')}
-                      disabled={checkoutLoading === 'PRO'}
-                      className="px-3 py-1.5 rounded-lg text-xs font-medium bg-[#635bff] hover:bg-[#5346e0] dark:bg-[#7f56d9] dark:hover:bg-[#6941c6] text-white transition-colors cursor-pointer"
-                    >
-                      {checkoutLoading === 'PRO' ? '...' : 'Upgrade to Pro'}
-                    </button>
-                  ) : (
-                    <span className="text-xs font-medium text-[#4ade80] bg-[#052e16] px-2.5 py-1 rounded-lg border border-[#14532d]">
-                      Suscripción Activa
-                    </span>
-                  )}
-                </div>
-
-                <p className="text-xs text-[#697386] dark:text-[#8792a2]">
-                  {isPlanActive
-                    ? 'Acceso total a cotizador IA multi-canal, scraping en tiempo real y optimización de presupuesto.'
-                    : 'Plan gratuito inicial para cotizar y comparar proveedores en México.'}
-                </p>
-              </div>
-
-              <div className="mt-8 pt-4 border-t border-[#e3e8ee] dark:border-[#1e2430] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div className="flex items-baseline gap-1">
-                  <span className="text-3xl font-bold tracking-tight text-[#0a2540] dark:text-white">{isPlanActive ? '$499' : '$0'}</span>
-                  <span className="text-xs text-[#697386] dark:text-[#8792a2] font-medium">/month (MXN)</span>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <span className="text-xs text-[#697386] dark:text-[#8792a2] font-medium">
-                    {quotesUsed} de {quotesTotal} cotizaciones
+                <div className="flex items-center justify-between pb-2">
+                  <h3 className="text-sm font-bold text-[#0a2540] dark:text-white">
+                    Starter (Gratuito)
+                  </h3>
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${
+                    !isPlanActive
+                      ? 'bg-[#f4f6f8] dark:bg-[#1a2236] text-[#635bff] dark:text-[#7a73ff] border border-[#e3e8ee] dark:border-[#2e3748]'
+                      : 'bg-[#f8fafc] dark:bg-[#121826] text-[#697386] dark:text-[#8792a2]'
+                  }`}>
+                    {!isPlanActive ? 'Plan Actual' : 'Plan Base'}
                   </span>
                 </div>
+
+                <div className="flex items-baseline gap-1 mt-1 mb-2">
+                  <span className="text-2xl font-extrabold text-[#0a2540] dark:text-white">$0</span>
+                  <span className="text-xs text-[#697386] dark:text-[#8792a2] font-medium">MXN / mes</span>
+                </div>
+
+                <p className="text-xs text-[#697386] dark:text-[#8792a2] mb-4">
+                  Ideal para profesionales independientes y primeras cotizaciones de suministros.
+                </p>
+
+                <ul className="space-y-2 text-xs text-[#4f566b] dark:text-[#8792a2] border-t border-[#f4f6f8] dark:border-[#1e2430] pt-3">
+                  <li className="flex items-center gap-2">
+                    <Check className="w-3.5 h-3.5 text-[#059669] shrink-0" />
+                    <span><strong>10 cotizaciones</strong> al mes</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-3.5 h-3.5 text-[#059669] shrink-0" />
+                    <span>Comparativa en 3 distribuidores</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-3.5 h-3.5 text-[#059669] shrink-0" />
+                    <span>Enlaces directos con <code className="text-[10px] bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">ref=mercant</code></span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-3.5 h-3.5 text-[#059669] shrink-0" />
+                    <span>Historial de 30 días</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="mt-6 pt-3 border-t border-[#f4f6f8] dark:border-[#1e2430]">
+                {!isPlanActive ? (
+                  <button
+                    type="button"
+                    disabled
+                    className="w-full py-2 px-3 rounded-xl text-xs font-semibold bg-[#f4f6f8] dark:bg-[#1a2236] text-[#697386] dark:text-[#8792a2] border border-[#e3e8ee] dark:border-[#2e3748] cursor-default text-center"
+                  >
+                    Tu Plan Actual ✓
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled
+                    className="w-full py-2 px-3 rounded-xl text-xs font-medium text-[#8792a2] border border-dashed border-[#e3e8ee] dark:border-[#1e2430] cursor-default text-center"
+                  >
+                    Plan Base
+                  </button>
+                )}
               </div>
             </div>
 
-            {/* Column 3: Payment Method Card */}
+            {/* 2. PRO Unlimited Card (Highlighted) */}
+            <div className={`relative rounded-2xl border-2 bg-white dark:bg-[#0c1018] p-5 flex flex-col justify-between transition-all duration-300 ${
+              isPlanActive
+                ? 'border-emerald-500/80 bg-emerald-500/[0.03] dark:bg-emerald-500/[0.06] ring-4 ring-emerald-500/10 shadow-lg shadow-emerald-500/10'
+                : 'border-[#635bff] dark:border-[#7f56d9] bg-[#635bff]/[0.02] ring-4 ring-[#635bff]/10 shadow-lg shadow-[#635bff]/10'
+            }`}>
+              {/* Floating Top Badge */}
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                {isPlanActive ? (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[10px] font-bold bg-[#052e16] text-[#4ade80] border border-[#14532d] shadow-sm uppercase tracking-wider">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#4ade80] animate-pulse" />
+                    ★ TU PLAN ACTUAL (ACTIVO ♾️)
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-[10px] font-bold bg-[#635bff] text-white shadow-sm uppercase tracking-wider">
+                    ★ MÁS POPULAR
+                  </span>
+                )}
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between pb-2 pt-1">
+                  <h3 className="text-sm font-bold text-[#0a2540] dark:text-white flex items-center gap-1.5">
+                    <span>Plan Pro Unlimited</span>
+                    <Sparkles className="w-3.5 h-3.5 text-[#635bff] dark:text-[#9e77ed]" />
+                  </h3>
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                    isPlanActive
+                      ? 'bg-[#052e16] text-[#4ade80] border border-[#14532d]'
+                      : 'bg-[#635bff]/15 text-[#635bff] dark:text-[#9e77ed]'
+                  }`}>
+                    {isPlanActive ? 'Desbloqueado' : 'Recomendado'}
+                  </span>
+                </div>
+
+                <div className="mt-1 mb-2">
+                  {isPlanActive ? (
+                    <div className="flex flex-wrap items-baseline gap-2">
+                      <span className="text-2xl font-extrabold text-[#059669] dark:text-[#34d399]">$0</span>
+                      <span className="line-through text-xs font-semibold text-[#697386] dark:text-[#8792a2]">$499 MXN</span>
+                      <span className="text-[10px] font-bold text-[#059669] dark:text-[#34d399] bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                        100% OFF Cupón Activo
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-2xl font-extrabold text-[#0a2540] dark:text-white">$499</span>
+                      <span className="text-xs text-[#697386] dark:text-[#8792a2] font-medium">MXN / mes</span>
+                    </div>
+                  )}
+                </div>
+
+                <p className="text-xs text-[#697386] dark:text-[#8792a2] mb-4">
+                  {isPlanActive
+                    ? 'Acceso total sin límites a comparativas de distribuidores, enlaces directos y radar de precios.'
+                    : 'Cotizaciones ilimitadas con IA multi-canal, scraping en tiempo real y optimización de presupuesto.'}
+                </p>
+
+                <ul className="space-y-2 text-xs text-[#4f566b] dark:text-[#8792a2] border-t border-[#f4f6f8] dark:border-[#1e2430] pt-3">
+                  <li className="flex items-center gap-2">
+                    <Check className="w-3.5 h-3.5 text-[#059669] shrink-0" />
+                    <span><strong className="text-[#0a2540] dark:text-white">Cotizaciones ILIMITADAS</strong> con IA</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-3.5 h-3.5 text-[#059669] shrink-0" />
+                    <span>Búsqueda en <strong>más de 500 distribuidores</strong> en México</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-3.5 h-3.5 text-[#059669] shrink-0" />
+                    <span>Enlaces directos con <code className="text-[10px] bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded font-bold">ref=mercant</code></span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-3.5 h-3.5 text-[#059669] shrink-0" />
+                    <span>Radar de precios en vivo & alertas WhatsApp</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-3.5 h-3.5 text-[#059669] shrink-0" />
+                    <span>Descargas ilimitadas de Órdenes de Compra (PDF / Excel)</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-3.5 h-3.5 text-[#059669] shrink-0" />
+                    <span>Soporte prioritario 24/7</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="mt-6 pt-3 border-t border-[#f4f6f8] dark:border-[#1e2430]">
+                {isPlanActive ? (
+                  <button
+                    type="button"
+                    disabled
+                    className="w-full py-2.5 px-3 rounded-xl text-xs font-bold bg-[#052e16] text-[#4ade80] border border-[#14532d] shadow-xs flex items-center justify-center gap-2 cursor-default"
+                  >
+                    <Check className="w-4 h-4 text-[#4ade80]" />
+                    <span>Plan Pro Activo ✓ (Desbloqueado)</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleCheckout('PRO')}
+                    disabled={checkoutLoading === 'PRO'}
+                    className="w-full py-2.5 px-3 rounded-xl text-xs font-bold bg-[#635bff] hover:bg-[#5346e0] dark:bg-[#7f56d9] dark:hover:bg-[#6941c6] text-white shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    {checkoutLoading === 'PRO' ? (
+                      <span className="inline-block w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>Mejorar a Pro Unlimited</span>
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* 3. Enterprise B2B Card */}
             <div className="rounded-2xl border border-[#e3e8ee] dark:border-[#1e2430] bg-white dark:bg-[#0c1018] p-5 flex flex-col justify-between">
               <div>
-                <h3 className="text-sm font-semibold text-[#0a2540] dark:text-white">
+                <div className="flex items-center justify-between pb-2">
+                  <h3 className="text-sm font-bold text-[#0a2540] dark:text-white">
+                    Enterprise B2B
+                  </h3>
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#f8fafc] dark:bg-[#121826] text-[#697386] dark:text-[#8792a2] border border-[#e3e8ee] dark:border-[#1e2430]">
+                    Corporativo
+                  </span>
+                </div>
+
+                <div className="flex items-baseline gap-1 mt-1 mb-2">
+                  <span className="text-2xl font-extrabold text-[#0a2540] dark:text-white">$1,999</span>
+                  <span className="text-xs text-[#697386] dark:text-[#8792a2] font-medium">MXN / mes</span>
+                </div>
+
+                <p className="text-xs text-[#697386] dark:text-[#8792a2] mb-4">
+                  Para departamentos de adquisiciones corporativas con flujos de aprobación y ERPs.
+                </p>
+
+                <ul className="space-y-2 text-xs text-[#4f566b] dark:text-[#8792a2] border-t border-[#f4f6f8] dark:border-[#1e2430] pt-3">
+                  <li className="flex items-center gap-2">
+                    <Check className="w-3.5 h-3.5 text-[#059669] shrink-0" />
+                    <span>Todo lo incluido en Pro Unlimited</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-3.5 h-3.5 text-[#059669] shrink-0" />
+                    <span>Multi-usuario con roles de compra y aprobación</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-3.5 h-3.5 text-[#059669] shrink-0" />
+                    <span>Integración API REST para ERP (SAP, Oracle, Odoo)</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-3.5 h-3.5 text-[#059669] shrink-0" />
+                    <span>Mayoristas cerrados (CVA, CT Internacional, Ingram)</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-3.5 h-3.5 text-[#059669] shrink-0" />
+                    <span>Account Manager dedicado & SLA &lt; 1 hora</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="mt-6 pt-3 border-t border-[#f4f6f8] dark:border-[#1e2430]">
+                <a
+                  href="mailto:ventas@mercant.ai?subject=Cotizaci%C3%B3n%20Plan%20Enterprise%20B2B"
+                  className="w-full py-2 px-3 rounded-xl text-xs font-semibold border border-[#e3e8ee] dark:border-[#333741] text-[#0a2540] dark:text-white hover:bg-[#f8fafc] dark:hover:bg-[#121826] flex items-center justify-center gap-2 transition-colors"
+                >
+                  Contactar Ventas
+                </a>
+              </div>
+            </div>
+          </div>
+
+          {/* Row: Promo Code & Payment Method */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Promo Code Inset (col-span-2) */}
+            <div className="md:col-span-2 rounded-2xl border border-[#e3e8ee] dark:border-[#1e2430] bg-white dark:bg-[#0c1018] p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-[#635bff]/15 dark:bg-[#7f56d9]/20 flex items-center justify-center text-[#635bff] dark:text-[#9e77ed] shrink-0">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-semibold text-[#0a2540] dark:text-white">
+                      Código de acceso:
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPromoCode('MERCANT-LIFETIME-5')
+                        handleApplyPromo(undefined, 'MERCANT-LIFETIME-5')
+                      }}
+                      className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-[#059669] text-white hover:bg-[#047857] transition-all cursor-pointer shadow-xs flex items-center gap-1"
+                      title="Haz clic para canjear MERCANT-LIFETIME-5 (Pro de por vida, 5 usos)"
+                    >
+                      <span>MERCANT-LIFETIME-5</span>
+                      <span className="text-[10px] opacity-90">(De por vida ♾️)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPromoCode('MERCANT10')
+                        handleApplyPromo(undefined, 'MERCANT10')
+                      }}
+                      className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-[#635bff] dark:bg-[#7f56d9] text-white hover:opacity-90 transition-all cursor-pointer shadow-xs flex items-center gap-1"
+                      title="Haz clic para canjear MERCANT10 (30 días)"
+                    >
+                      <span>MERCANT10</span>
+                      <span className="text-[10px] opacity-80">(30 días)</span>
+                    </button>
+                  </div>
+                  <span className="text-[11px] text-[#697386] dark:text-[#8792a2] block mt-0.5">
+                    Códigos exclusivos · <strong>MERCANT-LIFETIME-5</strong> desbloquea Pro Unlimited para siempre (5 usos máximos).
+                  </span>
+                </div>
+              </div>
+
+              <form onSubmit={handleApplyPromo} className="flex gap-2 w-full sm:w-auto shrink-0">
+                <input
+                  type="text"
+                  value={promoCode}
+                  onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                  placeholder="MERCANT10"
+                  className="font-mono uppercase text-xs font-semibold bg-[#f8fafc] dark:bg-[#121826] border border-[#e3e8ee] dark:border-[#333741] text-[#0a2540] dark:text-white placeholder-[#667085] rounded-lg px-3 py-2 w-full sm:w-36 focus:outline-none focus:border-[#635bff]"
+                />
+                <button
+                  type="submit"
+                  disabled={promoLoading}
+                  className="px-4 py-2 rounded-lg text-xs font-semibold bg-[#635bff] dark:bg-[#7f56d9] hover:opacity-90 active:scale-95 text-white transition-all cursor-pointer shadow-sm shrink-0 flex items-center justify-center min-w-[75px]"
+                >
+                  {promoLoading ? (
+                    <span className="inline-block w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    'Canjear'
+                  )}
+                </button>
+              </form>
+            </div>
+
+            {/* Payment Method (col-span-1) */}
+            <div className="rounded-2xl border border-[#e3e8ee] dark:border-[#1e2430] bg-white dark:bg-[#0c1018] p-4 flex flex-col justify-between">
+              <div>
+                <h3 className="text-xs font-semibold text-[#0a2540] dark:text-white">
                   {t('paymentMethod')}
                 </h3>
-                <p className="text-xs text-[#697386] dark:text-[#8792a2] mt-0.5">
+                <p className="text-[11px] text-[#697386] dark:text-[#8792a2] mt-0.5">
                   {t('paymentMethodDesc')}
                 </p>
               </div>
 
-              <div className="mt-4 p-3 rounded-xl border border-[#e3e8ee] dark:border-[#1e2430] bg-[#f8fafc] dark:bg-[#121826] flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-[#635bff] dark:bg-[#6941c6] flex items-center justify-center text-white shrink-0">
-                  <CreditCard className="w-4 h-4" />
+              <div className="mt-3 p-2.5 rounded-xl border border-[#e3e8ee] dark:border-[#1e2430] bg-[#f8fafc] dark:bg-[#121826] flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-lg bg-[#635bff] dark:bg-[#6941c6] flex items-center justify-center text-white shrink-0">
+                  <CreditCard className="w-3.5 h-3.5" />
                 </div>
                 <div className="min-w-0">
                   <span className="text-xs font-semibold text-[#0a2540] dark:text-white block truncate">
-                    Stripe Connect
+                    {isPlanActive ? 'Cupón Activo / Stripe Connect' : 'Stripe Connect'}
                   </span>
-                  <span className="text-[11px] text-[#697386] dark:text-[#8792a2] truncate block">
+                  <span className="text-[10px] text-[#697386] dark:text-[#8792a2] truncate block">
                     {userEmail}
                   </span>
                 </div>
               </div>
             </div>
-          </div>
-
-          {/* Minimalist Promo Code Inset with Clickable Code */}
-          <div className="rounded-2xl border border-[#e3e8ee] dark:border-[#1e2430] bg-white dark:bg-[#0c1018] p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-[#635bff]/15 dark:bg-[#7f56d9]/20 flex items-center justify-center text-[#635bff] dark:text-[#9e77ed] shrink-0">
-                <Sparkles className="w-4 h-4" />
-              </div>
-              <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-xs font-semibold text-[#0a2540] dark:text-white">
-                    Código de acceso:
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPromoCode('MERCANT-LIFETIME-5')
-                      handleApplyPromo(undefined, 'MERCANT-LIFETIME-5')
-                    }}
-                    className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-[#059669] text-white hover:bg-[#047857] transition-all cursor-pointer shadow-xs flex items-center gap-1"
-                    title="Haz clic para canjear MERCANT-LIFETIME-5 (Pro de por vida, 5 usos)"
-                  >
-                    <span>MERCANT-LIFETIME-5</span>
-                    <span className="text-[10px] opacity-90">(De por vida ♾️)</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPromoCode('MERCANT10')
-                      handleApplyPromo(undefined, 'MERCANT10')
-                    }}
-                    className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-[#635bff] dark:bg-[#7f56d9] text-white hover:opacity-90 transition-all cursor-pointer shadow-xs flex items-center gap-1"
-                    title="Haz clic para canjear MERCANT10 (30 días)"
-                  >
-                    <span>MERCANT10</span>
-                    <span className="text-[10px] opacity-80">(30 días)</span>
-                  </button>
-                </div>
-                <span className="text-[11px] text-[#697386] dark:text-[#8792a2] block mt-0.5">
-                  Códigos exclusivos · <strong>MERCANT-LIFETIME-5</strong> desbloquea Pro Unlimited para siempre (5 usos máximos).
-                </span>
-              </div>
-            </div>
-
-            <form onSubmit={handleApplyPromo} className="flex gap-2 w-full sm:w-auto shrink-0">
-              <input
-                type="text"
-                value={promoCode}
-                onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                placeholder="MERCANT10"
-                className="font-mono uppercase text-xs font-semibold bg-[#f8fafc] dark:bg-[#121826] border border-[#e3e8ee] dark:border-[#333741] text-[#0a2540] dark:text-white placeholder-[#667085] rounded-lg px-3 py-2 w-full sm:w-40 focus:outline-none focus:border-[#635bff]"
-              />
-              <button
-                type="submit"
-                disabled={promoLoading}
-                className="px-4 py-2 rounded-lg text-xs font-semibold bg-[#635bff] dark:bg-[#7f56d9] hover:opacity-90 active:scale-95 text-white transition-all cursor-pointer shadow-sm shrink-0 flex items-center justify-center min-w-[80px]"
-              >
-                {promoLoading ? (
-                  <span className="inline-block w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  'Canjear'
-                )}
-              </button>
-            </form>
           </div>
 
           {promoSuccess && (
