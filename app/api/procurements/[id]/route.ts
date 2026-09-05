@@ -33,6 +33,14 @@ export async function GET(
       })
 
       if (procurement) {
+        const hasOffers = procurement.items?.some((i: any) => i.offers && i.offers.length > 0)
+        if (hasOffers) {
+          return NextResponse.json({ procurement })
+        }
+        const memoryProc = getProcurementMemory(id)
+        if (memoryProc && memoryProc.items?.some((i: any) => i.offers && i.offers.length > 0)) {
+          return NextResponse.json({ procurement: memoryProc })
+        }
         return NextResponse.json({ procurement })
       }
     } catch (dbErr) {

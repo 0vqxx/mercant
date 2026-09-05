@@ -59,7 +59,22 @@ export async function POST(
       })
     } catch {}
 
-    const items = procurement.items || []
+    const rawItems =
+      procurement.items && procurement.items.length > 0
+        ? procurement.items
+        : body.items && body.items.length > 0
+        ? body.items
+        : body.procurement?.items && body.procurement.items.length > 0
+        ? body.procurement.items
+        : []
+
+    const items = rawItems.map((it: any, i: number) => ({
+      ...it,
+      id: it.id || `item-${id}-${i + 1}`,
+      name: it.name || 'Artículo sin nombre',
+      quantity: Number(it.quantity) || 1,
+      currency: it.currency || procurement.currency || 'MXN',
+    }))
 
     const updatedMemoryItems = await Promise.all(
       items.map(async (item: any) => {

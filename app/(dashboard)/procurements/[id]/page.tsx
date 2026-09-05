@@ -521,6 +521,33 @@ export default function ProcurementDetailPage() {
         </div>
       )}
 
+      {/* Hero CTA if no offers calculated yet */}
+      {!isStillSearching && totalOffersCount === 0 && (
+        <div className="p-8 rounded-xl border border-[#e3e8ee] dark:border-[#232a38] bg-white dark:bg-[#151a24] text-center space-y-4 shadow-sm">
+          <div className="w-12 h-12 rounded-full bg-[#635bff]/10 text-[#635bff] flex items-center justify-center mx-auto">
+            <Sparkles className="w-6 h-6" />
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-[#0a2540] dark:text-white">
+              Cotización lista para consultar distribuidores en vivo
+            </h3>
+            <p className="text-xs text-[#697386] dark:text-[#8792a2] max-w-md mx-auto mt-1">
+              Obtén precios de mercado, stock verificado y comparativa directa en más de 500 distribuidores para los {rankedItems.length} artículos de tu solicitud.
+            </p>
+          </div>
+          <Button
+            variant="primary"
+            size="md"
+            onClick={() => triggerSearch()}
+            isLoading={isSearching}
+            className="gap-2 bg-[#635bff] hover:bg-[#5349e0] text-white px-6 py-2.5 rounded-lg shadow-md font-semibold text-xs cursor-pointer inline-flex items-center mx-auto"
+          >
+            <RotateCw className="w-4 h-4" />
+            <span>Cotizar 12 Artículos en Vivo con 500+ Proveedores</span>
+          </Button>
+        </div>
+      )}
+
       {/* KPI & Budget summary */}
       {totalOffersCount > 0 && (
         <BudgetTracker
