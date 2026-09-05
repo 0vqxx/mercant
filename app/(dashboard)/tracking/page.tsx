@@ -1,7 +1,6 @@
-import React from 'react'
-import { prisma } from '@/lib/db'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/authOptions'
+'use client'
+
+import React, { useState, useEffect } from 'react'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import {
   TrendingDown,
@@ -17,93 +16,59 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 
-export const dynamic = 'force-dynamic'
+export default function PriceTrackingPage() {
+  const [procurements, setProcurements] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
-export default async function PriceTrackingPage() {
-  let trackingJobs: any[] = []
-  let allItems: any[] = []
-
-  try {
-    const session = await getServerSession(authOptions)
-    const userId = session?.user?.id
-
-    if (userId) {
-      // 1. Fetch any explicit tracking jobs for this user
-      trackingJobs = await prisma.priceTracking.findMany({
-        where: { userId },
-        include: {
-          item: {
-            include: {
-              offers: {
-                orderBy: { unitPrice: 'asc' },
-                take: 1,
-              },
-            },
-          },
-          history: {
-            orderBy: { checkedAt: 'desc' },
-            take: 7,
-          },
-        },
-        orderBy: { createdAt: 'desc' },
+  useEffect(() => {
+    fetch('/api/procurements')
+      .then((res) => (res.ok ? res.json() : { procurements: [] }))
+      .then((data) => {
+        setProcurements(data.procurements || [])
       })
-
-      // 2. Fetch all procurement items for this user with offers
-      allItems = await prisma.procurementItem.findMany({
-        where: {
-          procurement: {
-            userId,
-          },
-        },
-        include: {
-          offers: {
-            orderBy: { unitPrice: 'asc' },
-          },
-          procurement: true,
-        },
-        orderBy: { createdAt: 'desc' },
+      .catch((err) => {
+        console.warn('[PriceTrackingPage] Notice:', err)
+        setProcurements([])
       })
-    }
-  } catch (err) {
-    console.error('[PriceTrackingPage] Error retrieving tracking jobs:', err)
-    trackingJobs = []
-    allItems = []
-  }
+      .finally(() => setLoading(false))
+  }, [])
 
-  // Build unified monitored items
-  const trackedItems = allItems.map((item: any) => {
-    const offers = item.offers || []
-    const bestOffer = offers[0]
-    const worstOffer = offers[offers.length - 1]
-    const medianPrice =
-      offers.length > 0
-        ? Math.round(
-            offers.reduce((acc: number, o: any) => acc + (o.unitPrice || 0), 0) / offers.length,
-          )
-        : 0
-    const targetPrice = bestOffer ? Math.round(bestOffer.unitPrice * 0.92) : 0
-    const changePct =
-      worstOffer && bestOffer && worstOffer.unitPrice > 0
-        ? Math.round(((bestOffer.unitPrice - worstOffer.unitPrice) / worstOffer.unitPrice) * 100)
-        : -8
+  // Build unified monitored items from procurements
+  const trackedItems = procurements.flatMap((p: any) =>
+    (p.items || []).map((item: any) => {
+      const offers = item.offers || []
+      const bestOffer = offers[0]
+      const worstOffer = offers[offers.length - 1]
+      const medianPrice =
+        offers.length > 0
+          ? Math.round(
+              offers.reduce((acc: number, o: any) => acc + (o.unitPrice || 0), 0) / offers.length,
+            )
+          : 0
+      const targetPrice = bestOffer ? Math.round(bestOffer.unitPrice * 0.92) : 0
+      const changePct =
+        worstOffer && bestOffer && worstOffer.unitPrice > 0
+          ? Math.round(((bestOffer.unitPrice - worstOffer.unitPrice) / worstOffer.unitPrice) * 100)
+          : -8
 
-    return {
-      id: item.id,
-      name: item.name,
-      procurementName: item.procurement?.name || 'Compra',
-      procurementId: item.procurement?.id || '',
-      quantity: item.quantity,
-      bestPrice: bestOffer?.unitPrice || 0,
-      targetPrice,
-      medianPrice,
-      supplier: bestOffer?.supplierName || 'Distribuidor en línea',
-      url: bestOffer?.sourceUrl || '#',
-      changePct,
-      offersCount: offers.length,
-      currency: bestOffer?.currency || item.currency || 'MXN',
-      status: 'MONITORING',
-    }
-  })
+      return {
+        id: item.id,
+        name: item.name,
+        procurementName: p.name || 'Compra',
+        procurementId: p.id || '',
+        quantity: item.quantity,
+        bestPrice: bestOffer?.unitPrice || 0,
+        targetPrice,
+        medianPrice,
+        supplier: bestOffer?.supplierName || 'Distribuidor en línea',
+        url: bestOffer?.sourceUrl || '#',
+        changePct,
+        offersCount: offers.length,
+        currency: bestOffer?.currency || item.currency || 'MXN',
+        status: 'MONITORING',
+      }
+    })
+  )
 
   return (
     <div className="space-y-6">

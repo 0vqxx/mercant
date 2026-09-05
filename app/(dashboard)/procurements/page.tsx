@@ -1,37 +1,26 @@
-import React from 'react'
+'use client'
+
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { prisma } from '@/lib/db'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/authOptions'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { PlusCircle, ShoppingCart, ArrowUpRight } from 'lucide-react'
 
-export const dynamic = 'force-dynamic'
+export default function ProcurementsListPage() {
+  const [procurements, setProcurements] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
-export default async function ProcurementsListPage() {
-  let procurements: any[] = []
-
-  try {
-    const session = await getServerSession(authOptions)
-    const userId = session?.user?.id
-
-    if (userId) {
-      procurements = await prisma.procurement.findMany({
-        where: { userId },
-        include: {
-          items: {
-            include: {
-              offers: true,
-            },
-          },
-        },
-        orderBy: { createdAt: 'desc' },
+  useEffect(() => {
+    fetch('/api/procurements')
+      .then((res) => (res.ok ? res.json() : { procurements: [] }))
+      .then((data) => {
+        setProcurements(data.procurements || [])
       })
-    }
-  } catch (err) {
-    console.error('[ProcurementsListPage] Error retrieving procurements:', err)
-    procurements = []
-  }
+      .catch((err) => {
+        console.warn('[ProcurementsListPage] Notice:', err)
+        setProcurements([])
+      })
+      .finally(() => setLoading(false))
+  }, [])
 
   return (
     <div className="space-y-6">

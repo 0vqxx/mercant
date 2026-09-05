@@ -1,40 +1,26 @@
-import React from 'react'
+'use client'
+
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { prisma } from '@/lib/db'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/authOptions'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { History, ArrowUpRight, RotateCw, ExternalLink } from 'lucide-react'
 
-export const dynamic = 'force-dynamic'
+export default function HistoryPage() {
+  const [completedProcurements, setCompletedProcurements] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
-export default async function HistoryPage() {
-  let completedProcurements: any[] = []
-
-  try {
-    const session = await getServerSession(authOptions)
-    const userId = session?.user?.id
-
-    if (userId) {
-      completedProcurements = await prisma.procurement.findMany({
-        where: { userId },
-        include: {
-          items: {
-            include: {
-              offers: {
-                orderBy: { buyingScore: 'desc' },
-                take: 1,
-              },
-            },
-          },
-        },
-        orderBy: { createdAt: 'desc' },
+  useEffect(() => {
+    fetch('/api/procurements')
+      .then((res) => (res.ok ? res.json() : { procurements: [] }))
+      .then((data) => {
+        setCompletedProcurements(data.procurements || [])
       })
-    }
-  } catch (err) {
-    console.error('[HistoryPage] Error retrieving procurements:', err)
-    completedProcurements = []
-  }
+      .catch((err) => {
+        console.warn('[HistoryPage] Notice:', err)
+        setCompletedProcurements([])
+      })
+      .finally(() => setLoading(false))
+  }, [])
 
   return (
     <div className="space-y-6">

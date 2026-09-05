@@ -1,8 +1,7 @@
-import React from 'react'
+'use client'
+
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { prisma } from '@/lib/db'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/authOptions'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import {
   PlusCircle,
@@ -16,33 +15,22 @@ import {
 } from 'lucide-react'
 import { DashboardCharts } from '@/components/analytics/DashboardCharts'
 
-export const dynamic = 'force-dynamic'
+export default function DashboardPage() {
+  const [procurements, setProcurements] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
-export default async function DashboardPage() {
-  let procurements: any[] = []
-
-  try {
-    const session = await getServerSession(authOptions)
-    const userId = session?.user?.id
-
-    if (userId) {
-      procurements = await prisma.procurement.findMany({
-        where: { userId },
-        include: {
-          items: {
-            include: {
-              offers: true,
-            },
-          },
-        },
-        orderBy: { createdAt: 'desc' },
-        take: 10,
+  useEffect(() => {
+    fetch('/api/procurements')
+      .then((res) => (res.ok ? res.json() : { procurements: [] }))
+      .then((data) => {
+        setProcurements(data.procurements || [])
       })
-    }
-  } catch (err) {
-    console.error('[DashboardPage] Error retrieving procurements:', err)
-    procurements = []
-  }
+      .catch((err) => {
+        console.warn('[DashboardPage] Notice:', err)
+        setProcurements([])
+      })
+      .finally(() => setLoading(false))
+  }, [])
 
   const totalProcurements = procurements.length
   let totalEstimatedSpend = 0
