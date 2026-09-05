@@ -148,19 +148,25 @@ export default function ProcurementDetailPage() {
       if (res.ok) {
         const data = await res.json()
         if (data.procurement) {
-          setProcurement(data.procurement)
+          const completedProc = { ...data.procurement, status: 'COMPLETED' }
+          setProcurement(completedProc)
           if (typeof window !== 'undefined') {
             try {
-              localStorage.setItem('mercant_procurement_' + id, JSON.stringify(data.procurement))
+              localStorage.setItem('mercant_procurement_' + id, JSON.stringify(completedProc))
             } catch {}
           }
+          setIsSearching(false)
           return
         }
       }
 
-      await fetchProcurement()
+      const refreshed = await fetchProcurement()
+      if (refreshed) {
+        setProcurement({ ...refreshed, status: 'COMPLETED' })
+      }
     } catch (e) {
       console.error('Error running search:', e)
+      setProcurement((prev: any) => (prev ? { ...prev, status: 'COMPLETED' } : prev))
     } finally {
       setIsSearching(false)
     }
@@ -388,7 +394,7 @@ export default function ProcurementDetailPage() {
     )
   }
 
-  const isStillSearching = isSearching || procurement.status === 'SEARCHING'
+  const isStillSearching = isSearching || (procurement.status === 'SEARCHING' && totalOffersCount === 0)
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
@@ -507,9 +513,9 @@ export default function ProcurementDetailPage() {
         <div className="p-3.5 rounded-lg border border-[#bfdbfe] dark:border-[#1d4ed8]/40 bg-[#f0f5ff] dark:bg-[#1e3a8a]/20 flex items-center gap-3 text-xs text-[#0066cc] dark:text-[#60a5fa]">
           <div className="w-4 h-4 rounded-full border-2 border-[#0066cc] border-t-transparent animate-spin shrink-0" />
           <div>
-            <span className="font-semibold block mb-0.5">Consultando distribuidores en vivo...</span>
+            <span className="font-semibold block mb-0.5">Consultando distribuidores especializados en vivo...</span>
             <span className="opacity-90 text-[11px]">
-              Buscando precios y disponibilidad en tiempo real en Amazon, MercadoLibre, CyberPuerta, Lenovo, Dell, DDTech, Intercompras, Liverpool, Walmart, Costco, Sam&apos;s Club, Steren, Doto y PCel.
+              Buscando precios y disponibilidad en tiempo real en la red de más de 500 distribuidores verificados por categoría (Tecnología, Mobiliario, Ferretería, EPP, Médico, Limpieza, Eléctrico, etc.).
             </span>
           </div>
         </div>
