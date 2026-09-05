@@ -6,6 +6,7 @@
  */
 
 import { resolveDirectProductUrl } from './direct_product_resolver'
+import { extractCleanProduct } from './cleanQuery'
 
 export interface SupplierEntry {
   id: string
@@ -21,6 +22,8 @@ export interface SupplierEntry {
   verified: boolean
   country: string
   description: string
+  brandExclusive?: string[]
+  requiresLogin?: boolean
 }
 
 export type SupplierCategory =
@@ -209,6 +212,7 @@ export const MASTER_SUPPLIER_CATALOG: SupplierEntry[] = [
     category: 'tecnologia',
     categoryLabel: 'Tecnología & Redes',
     keywords: ['dell', 'optiplex', 'latitude', 'precision', 'vostro', 'poweredge', 'servidor dell', 'monitor dell'],
+    brandExclusive: ['dell', 'optiplex', 'latitude', 'precision', 'poweredge', 'vostro'],
     buildUrl: (text, brand, model) => resolveDirectProductUrl('dell.com/mx', text, brand, model),
     baseRating: 4.8,
     reviews: 2150,
@@ -224,7 +228,8 @@ export const MASTER_SUPPLIER_CATALOG: SupplierEntry[] = [
     category: 'tecnologia',
     categoryLabel: 'Tecnología & Redes',
     keywords: ['lenovo', 'thinkpad', 'thinkcentre', 'thinkstation', 'ideapad', 'yoga', 'legion', 'servidor thinksystem'],
-    buildUrl: createGenericUrl('www.lenovo.com/mx/es', '/search?fq=&', 'text'),
+    brandExclusive: ['lenovo', 'thinkpad', 'thinkcentre', 'thinkstation', 'ideapad', 'yoga', 'legion'],
+    buildUrl: (text, brand, model) => resolveDirectProductUrl('lenovo.com/mx', text, brand, model),
     baseRating: 4.8,
     reviews: 1820,
     trustBaseline: 97,
@@ -239,7 +244,8 @@ export const MASTER_SUPPLIER_CATALOG: SupplierEntry[] = [
     category: 'tecnologia',
     categoryLabel: 'Tecnología & Redes',
     keywords: ['hp', 'probook', 'elitebook', 'zbook', 'laserjet', 'impresora hp', 'toner hp', 'workstation'],
-    buildUrl: createGenericUrl('www.hp.com/mx-es/shop', '/catalogsearch/result/?', 'q'),
+    brandExclusive: ['hp', 'hewlett packard', 'probook', 'elitebook', 'laserjet', 'zbook'],
+    buildUrl: (text, brand, model) => resolveDirectProductUrl('hp.com/mx-es', text, brand, model),
     baseRating: 4.7,
     reviews: 1420,
     trustBaseline: 96,
@@ -254,7 +260,7 @@ export const MASTER_SUPPLIER_CATALOG: SupplierEntry[] = [
     category: 'tecnologia',
     categoryLabel: 'Tecnología & Redes',
     keywords: ['computadora', 'laptop', 'monitor', 'ssd', 'ram', 'procesador', 'tarjeta de video', 'pc armada'],
-    buildUrl: createGenericUrl('ddtech.mx', '/buscar?', 'buscar'),
+    buildUrl: (text, brand, model) => resolveDirectProductUrl('ddtech.mx', text, brand, model),
     baseRating: 4.6,
     reviews: 1120,
     trustBaseline: 94,
@@ -269,7 +275,7 @@ export const MASTER_SUPPLIER_CATALOG: SupplierEntry[] = [
     category: 'tecnologia',
     categoryLabel: 'Tecnología & Redes',
     keywords: ['servidor', 'switch', 'router', 'laptop', 'impresora', 'punto de venta', 'toner', 'redes'],
-    buildUrl: createGenericUrl('intercompras.com', '/buscar.php?', 'q'),
+    buildUrl: (text, brand, model) => resolveDirectProductUrl('intercompras.com', text, brand, model),
     baseRating: 4.5,
     reviews: 950,
     trustBaseline: 93,
@@ -284,7 +290,7 @@ export const MASTER_SUPPLIER_CATALOG: SupplierEntry[] = [
     category: 'tecnologia',
     categoryLabel: 'Tecnología & Redes',
     keywords: ['computadora', 'laptop', 'monitor', 'servidor', 'cable red', 'switch', 'almacenamiento'],
-    buildUrl: createGenericUrl('pcel.com', '/buscar?', 'search'),
+    buildUrl: (text, brand, model) => resolveDirectProductUrl('pcel.com', text, brand, model),
     baseRating: 4.4,
     reviews: 640,
     trustBaseline: 90,
@@ -299,7 +305,7 @@ export const MASTER_SUPPLIER_CATALOG: SupplierEntry[] = [
     category: 'tecnologia',
     categoryLabel: 'Tecnología & Redes',
     keywords: ['laptop', 'monitor', 'gadgets', 'smartphones', 'audio', 'pantallas', 'accesorios'],
-    buildUrl: createGenericUrl('www.doto.com.mx', '/search?', 'q'),
+    buildUrl: (text, brand, model) => resolveDirectProductUrl('doto.com.mx', text, brand, model),
     baseRating: 4.5,
     reviews: 820,
     trustBaseline: 91,
@@ -314,7 +320,7 @@ export const MASTER_SUPPLIER_CATALOG: SupplierEntry[] = [
     category: 'tecnologia',
     categoryLabel: 'Tecnología & Redes',
     keywords: ['cctv', 'camara de seguridad', 'switch poe', 'fibra optica', 'radiocomunicacion', 'control de acceso', 'cable utp', 'ubiquiti', 'hikvision'],
-    buildUrl: createGenericUrl('www.syscom.mx', '/principal/busqueda?', 'q'),
+    buildUrl: (text, brand, model) => resolveDirectProductUrl('syscom.mx', text, brand, model),
     baseRating: 4.8,
     reviews: 3100,
     trustBaseline: 98,
@@ -329,7 +335,8 @@ export const MASTER_SUPPLIER_CATALOG: SupplierEntry[] = [
     category: 'tecnologia',
     categoryLabel: 'Tecnología & Redes',
     keywords: ['mayorista', 'licitacion', 'dell', 'hp', 'lenovo', 'cisco', 'redes', 'servidores'],
-    buildUrl: createGenericUrl('ctonline.mx', '/buscar?', 'q'),
+    buildUrl: (text, brand, model) => resolveDirectProductUrl('ctonline.mx', text, brand, model),
+    requiresLogin: true,
     baseRating: 4.7,
     reviews: 2400,
     trustBaseline: 96,
@@ -344,7 +351,8 @@ export const MASTER_SUPPLIER_CATALOG: SupplierEntry[] = [
     category: 'tecnologia',
     categoryLabel: 'Tecnología & Redes',
     keywords: ['cva', 'mayoreo', 'distribuidor', 'servidor', 'computo corporativo', 'licencias'],
-    buildUrl: createGenericUrl('www.grupocva.com', '/busqueda?', 'q'),
+    buildUrl: (text, brand, model) => resolveDirectProductUrl('grupocva.com', text, brand, model),
+    requiresLogin: true,
     baseRating: 4.6,
     reviews: 1850,
     trustBaseline: 95,
@@ -359,7 +367,8 @@ export const MASTER_SUPPLIER_CATALOG: SupplierEntry[] = [
     category: 'tecnologia',
     categoryLabel: 'Tecnología & Redes',
     keywords: ['ingram', 'cisco', 'microsoft', 'ibm', 'hpe', 'aruba', 'fortinet', 'enterprise'],
-    buildUrl: createGenericUrl('mx.ingrammicro.com', '/site/search?', 'query'),
+    buildUrl: (text, brand, model) => resolveDirectProductUrl('mx.ingrammicro.com', text, brand, model),
+    requiresLogin: true,
     baseRating: 4.8,
     reviews: 4200,
     trustBaseline: 98,
@@ -724,49 +733,50 @@ const EXTENDED_BRANDS: Array<{
   domain: string
   category: SupplierCategory
   keywords: string[]
+  brandExclusive?: string[]
   rating: number
   reviews: number
   trust: number
   desc: string
 }> = [
-  { name: 'TP-Link México Oficial', domain: 'tp-link.com/mx', category: 'tecnologia', keywords: ['switch', 'router', 'access point', 'omada', 'poe'], rating: 4.8, reviews: 1400, trust: 97, desc: 'Switches administrables, routers VPN y soluciones de red Gigabit.' },
-  { name: 'Cisco Systems México', domain: 'cisco.com/mx', category: 'tecnologia', keywords: ['catalyst', 'meraki', 'firewall', 'cisco switch', 'telepresencia'], rating: 4.9, reviews: 2600, trust: 99, desc: 'Infraestructura de red de misión crítica y ciberseguridad empresarial.' },
-  { name: 'Ubiquiti México / UniFi', domain: 'ui.com', category: 'tecnologia', keywords: ['unifi', 'dream machine', 'u6 pro', 'antena ubiquiti', 'edgerouter'], rating: 4.8, reviews: 1900, trust: 98, desc: 'Redes empresariales de alto rendimiento sin licencias recurrentes.' },
-  { name: 'Fortinet México', domain: 'fortinet.com', category: 'tecnologia', keywords: ['fortigate', 'firewall', 'fortiswitch', 'seguridad perimetral'], rating: 4.9, reviews: 1800, trust: 99, desc: 'Líder en firewalls de última generación y protección perimetral.' },
-  { name: 'Epson México', domain: 'epson.com.mx', category: 'tecnologia', keywords: ['ecotank', 'proyector', 'videoproyector', 'impresora de etiquetas', 'escaner'], rating: 4.7, reviews: 2200, trust: 96, desc: 'Sistemas de impresión de tanque continuo EcoTank y proyectores de alta luminosidad.' },
-  { name: 'Brother México', domain: 'brother.com.mx', category: 'tecnologia', keywords: ['laser monocromatica', 'toner brother', 'rotuladora p-touch', 'escaner documental'], rating: 4.7, reviews: 1450, trust: 95, desc: 'Impresión láser departamental y rotulación profesional de cables y activos.' },
-  { name: 'Kingston Technology', domain: 'kingston.com', category: 'tecnologia', keywords: ['fury', 'nvme', 'ssd kingston', 'memoria ram ddr4', 'ddr5', 'usb datatraveler'], rating: 4.8, reviews: 3100, trust: 98, desc: 'Memoria RAM y unidades de estado sólido para servidores y computadoras.' },
-  { name: 'Western Digital / SanDisk', domain: 'westerndigital.com', category: 'tecnologia', keywords: ['wd purple', 'wd red', 'wd black', 'disco duro nas', 'sandisk extreme'], rating: 4.8, reviews: 2900, trust: 98, desc: 'Almacenamiento masivo para videovigilancia, servidores NAS y centros de datos.' },
-  { name: 'Logitech México Oficial', domain: 'logitech.com/es-mx', category: 'tecnologia', keywords: ['mx master', 'teclado mx keys', 'rally bar', 'videoconferencia', 'meetup'], rating: 4.9, reviews: 3800, trust: 98, desc: 'Periféricos ergonómicos y sistemas de salas de videoconferencia Microsoft Teams / Zoom.' },
-  { name: 'Apple México Empresas', domain: 'apple.com/mx', category: 'tecnologia', keywords: ['macbook pro', 'macbook air', 'ipad pro', 'imac m3', 'mac mini', 'iphone'], rating: 4.9, reviews: 5400, trust: 99, desc: 'Equipos Apple empresariales con implementación Zero-Touch y AppleCare for Enterprise.' },
-  { name: 'Bosch Herramientas Eléctricas', domain: 'bosch-herramientas.com.mx', category: 'ferreteria', keywords: ['taladro percutor bosch', 'nivel laser', 'amoladora', 'medidor de distancia'], rating: 4.8, reviews: 2400, trust: 98, desc: 'Herramientas electroportátiles profesionales de máxima ingeniería alemana.' },
-  { name: 'DeWalt México Oficial', domain: 'dewalt.com.mx', category: 'ferreteria', keywords: ['taladro 20v max', 'rotomartillo sds', 'sierra ingletadora', 'atornillador de impacto'], rating: 4.8, reviews: 2800, trust: 98, desc: 'Herramientas de potencia para construcción pesada y carpintería profesional.' },
-  { name: 'Makita México', domain: 'makita.com.mx', category: 'ferreteria', keywords: ['makita 18v', 'esmeril makita', 'cepillo electrico', 'sierra circular makita'], rating: 4.8, reviews: 2100, trust: 97, desc: 'Pioneros en motores sin carbones (Brushless) y maquinaria de construcción.' },
-  { name: 'Milwaukee Tool México', domain: 'milwaukeetool.mx', category: 'ferreteria', keywords: ['m18 fuel', 'packout', 'cajas packout', 'llave de impacto milwaukee'], rating: 4.9, reviews: 2600, trust: 99, desc: 'Soluciones heavy-duty para mecánicos, electricistas y constructores.' },
-  { name: 'Helvex Oficial', domain: 'helvex.com.mx', category: 'ferreteria', keywords: ['fluxometro', 'llave con sensor', 'regadera institucional', 'griferia helvex'], rating: 4.8, reviews: 1650, trust: 97, desc: 'Grifería y muebles de baño institucionales de alta eficiencia hídrica.' },
-  { name: 'Rotoplas México', domain: 'rotoplas.com.mx', category: 'ferreteria', keywords: ['tinaco', 'cisterna', 'bomba de agua', 'filtro de agua', 'tuboplus'], rating: 4.8, reviews: 3100, trust: 98, desc: 'Almacenamiento, conducción y purificación de agua institucional.' },
-  { name: 'Cemex Concretos', domain: 'cemexmexico.com', category: 'ferreteria', keywords: ['cemento tolteca', 'cemento monterrey', 'bulto de cemento', 'mortero'], rating: 4.8, reviews: 4200, trust: 98, desc: 'Materiales cementantes y soluciones integrales de construcción.' },
-  { name: 'MSA The Safety Company', domain: 'msasafety.com', category: 'seguridad_industrial', keywords: ['casco v-gard', 'detector de gas altair', 'arnes workman', 'linea de vida msa'], rating: 4.9, reviews: 1950, trust: 99, desc: 'Protección de cabeza, detección de gases tóxicos y rescate en espacios confinados.' },
-  { name: 'Honeywell Industrial Safety', domain: 'honeywell.com', category: 'seguridad_industrial', keywords: ['guantes honeywell', 'arnes miller', 'lentes uvex', 'respirador north'], rating: 4.8, reviews: 2200, trust: 98, desc: 'Protección personal integral y sistemas anticaídas Miller.' },
-  { name: 'Ansell México', domain: 'ansell.com', category: 'seguridad_industrial', keywords: ['guantes hyflex', 'guantes alpha tec', 'proteccion quimica', 'touchntuff'], rating: 4.8, reviews: 1400, trust: 97, desc: 'Líder en protección para manos y prendas de protección química.' },
-  { name: 'Riverline Ergonomics', domain: 'riverline.com.mx', category: 'seguridad_industrial', keywords: ['botas riverline', 'calzado ergonomico', 'bota con casquillo ligera'], rating: 4.7, reviews: 980, trust: 95, desc: 'Calzado industrial con tecnología de absorción de impacto y confort.' },
-  { name: 'Scribe México', domain: 'scribe.com.mx', category: 'papeleria', keywords: ['papel bond fotocopia', 'cuaderno scribe', 'libreta profesional', 'resma de hojas'], rating: 4.8, reviews: 3400, trust: 97, desc: 'Papel cortado para impresión de alta velocidad sin atascos.' },
-  { name: 'BIC México', domain: 'bic.com.mx', category: 'papeleria', keywords: ['boligrafo cristal', 'marcador permanente', 'marcatextos', 'corrector líquido'], rating: 4.8, reviews: 2900, trust: 97, desc: 'Instrumentos de escritura confiables de alto rendimiento.' },
-  { name: 'Pilot México', domain: 'pilotpen.com.mx', category: 'papeleria', keywords: ['pluma g2', 'boligrafo borrable frixion', 'plumon para pizarron', 'v5 hi-tecpoint'], rating: 4.8, reviews: 1800, trust: 96, desc: 'Bolígrafos de gel de alta precisión y rotuladores recargables.' },
-  { name: 'Steelcase México', domain: 'steelcase.com', category: 'mobiliario', keywords: ['silla gesture', 'silla leap', 'escritorio migration', 'mobiliario acustico'], rating: 4.9, reviews: 1700, trust: 99, desc: 'Arquitectura interior y mobiliario ergonómico para corporativos globales.' },
-  { name: 'Haworth México', domain: 'haworth.com', category: 'mobiliario', keywords: ['silla zody', 'silla fern', 'paneles divisorios', 'mesas colaborativas'], rating: 4.9, reviews: 1300, trust: 98, desc: 'Espacios de trabajo centrados en el bienestar y sostenibilidad.' },
-  { name: 'Hanna Instruments México', domain: 'hannainst.com.mx', category: 'laboratorio', keywords: ['potenciometro', 'medidor de ph', 'conductimetro', 'fotometro', 'turbidimetro'], rating: 4.8, reviews: 1100, trust: 97, desc: 'Instrumentación electroquímica para análisis de agua, alimentos y suelos.' },
-  { name: 'Fluke Corporation México', domain: 'fluke.com/es-mx', category: 'electricidad', keywords: ['multimetro fluke 87v', 'pinza amperimetrica', 'camara termografica', 'megohmetro'], rating: 4.9, reviews: 2900, trust: 99, desc: 'Estándar mundial en herramientas de prueba y medición electrónica.' },
-  { name: 'Mitutoyo México', domain: 'mitutoyo.com.mx', category: 'ferreteria', keywords: ['vernier digital', 'micrometro', 'comparador de caratula', 'durómetro'], rating: 4.9, reviews: 1400, trust: 99, desc: 'Instrumentos de metrología dimensional y control de calidad industrial.' },
-  { name: 'Eaton Corporation México', domain: 'eaton.com/mx', category: 'electricidad', keywords: ['ups eaton 9px', 'tripp lite no break', 'supresor de picos', 'pdu para rack'], rating: 4.8, reviews: 2400, trust: 98, desc: 'Respaldo energético ininterrumpible, PDUs y racks para servidores.' },
-  { name: 'ABB México Electrificación', domain: 'new.abb.com/mx', category: 'electricidad', keywords: ['interruptor caja moldeada', 'variador de frecuencia', 'contactores', 'relevador'], rating: 4.9, reviews: 2100, trust: 99, desc: 'Equipos de distribución eléctrica y automatización industrial.' },
-  { name: 'Siemens México', domain: 'siemens.com/mx', category: 'electricidad', keywords: ['plc s7-1200', 'interruptor siemens', 'guardamotor', 'sensor inductivo'], rating: 4.9, reviews: 3300, trust: 99, desc: 'Automatización, electrificación y digitalización industrial.' },
-  { name: 'Bticino / Legrand México', domain: 'bticino.com.mx', category: 'electricidad', keywords: ['placa living now', 'apagador matix', 'canaleta legrand', 'gabinete legrand'], rating: 4.8, reviews: 1900, trust: 97, desc: 'Sistemas de canalización, accesorios eléctricos y domótica comercial.' },
-  { name: 'Daikin México', domain: 'daikin.com.mx', category: 'hvac', keywords: ['vrv daikin', 'minisplit daikin', 'chiller magnetico', 'bomba de calor'], rating: 4.9, reviews: 1800, trust: 98, desc: 'Líder global en sistemas de volumen de refrigerante variable (VRV).' },
-  { name: 'Trane México Climas', domain: 'trane.com/commercial/latin-america/mx', category: 'hvac', keywords: ['aire acondicionado trane', 'paquete trane', 'chiller enfriado por agua'], rating: 4.8, reviews: 1500, trust: 98, desc: 'Soluciones de confort térmico y climatización para grandes edificios.' },
-  { name: 'CONTPAQi Sistemas', domain: 'contpaqi.com', category: 'software', keywords: ['contpaqi contabilidad', 'contpaqi nominas', 'contpaqi factura electronica', 'licencia anual'], rating: 4.8, reviews: 2600, trust: 98, desc: 'Software contable y nóminas líder en cumplimiento con el SAT y CFDI 4.0.' },
-  { name: 'Aspel de México', domain: 'aspel.com.mx', category: 'software', keywords: ['aspel sae', 'aspel noi', 'aspel coe', 'aspel caja', 'licencia aspel'], rating: 4.7, reviews: 2100, trust: 96, desc: 'Sistemas de administración empresarial para control de inventarios y facturación.' },
-  { name: 'Autodesk México Oficial', domain: 'autodesk.mx', category: 'software', keywords: ['autocad', 'revit', 'civil 3d', 'maya', 'licencia autodesk'], rating: 4.9, reviews: 3400, trust: 99, desc: 'Software de diseño 2D/3D, arquitectura, ingeniería y construcción.' },
+  { name: 'TP-Link México Oficial', domain: 'tp-link.com/mx', category: 'tecnologia', keywords: ['switch', 'router', 'access point', 'omada', 'poe'], brandExclusive: ['tp-link', 'tplink', 'omada'], rating: 4.8, reviews: 1400, trust: 97, desc: 'Switches administrables, routers VPN y soluciones de red Gigabit.' },
+  { name: 'Cisco Systems México', domain: 'cisco.com/mx', category: 'tecnologia', keywords: ['catalyst', 'meraki', 'firewall', 'cisco switch', 'telepresencia'], brandExclusive: ['cisco', 'meraki', 'catalyst'], rating: 4.9, reviews: 2600, trust: 99, desc: 'Infraestructura de red de misión crítica y ciberseguridad empresarial.' },
+  { name: 'Ubiquiti México / UniFi', domain: 'ui.com', category: 'tecnologia', keywords: ['unifi', 'dream machine', 'u6 pro', 'antena ubiquiti', 'edgerouter'], brandExclusive: ['ubiquiti', 'unifi'], rating: 4.8, reviews: 1900, trust: 98, desc: 'Redes empresariales de alto rendimiento sin licencias recurrentes.' },
+  { name: 'Fortinet México', domain: 'fortinet.com', category: 'tecnologia', keywords: ['fortigate', 'firewall', 'fortiswitch', 'seguridad perimetral'], brandExclusive: ['fortinet', 'fortigate'], rating: 4.9, reviews: 1800, trust: 99, desc: 'Líder en firewalls de última generación y protección perimetral.' },
+  { name: 'Epson México', domain: 'epson.com.mx', category: 'tecnologia', keywords: ['ecotank', 'proyector', 'videoproyector', 'impresora de etiquetas', 'escaner'], brandExclusive: ['epson'], rating: 4.7, reviews: 2200, trust: 96, desc: 'Sistemas de impresión de tanque continuo EcoTank y proyectores de alta luminosidad.' },
+  { name: 'Brother México', domain: 'brother.com.mx', category: 'tecnologia', keywords: ['laser monocromatica', 'toner brother', 'rotuladora p-touch', 'escaner documental'], brandExclusive: ['brother'], rating: 4.7, reviews: 1450, trust: 95, desc: 'Impresión láser departamental y rotulación profesional de cables y activos.' },
+  { name: 'Kingston Technology', domain: 'kingston.com', category: 'tecnologia', keywords: ['fury', 'nvme', 'ssd kingston', 'memoria ram ddr4', 'ddr5', 'usb datatraveler'], brandExclusive: ['kingston', 'fury'], rating: 4.8, reviews: 3100, trust: 98, desc: 'Memoria RAM y unidades de estado sólido para servidores y computadoras.' },
+  { name: 'Western Digital / SanDisk', domain: 'westerndigital.com', category: 'tecnologia', keywords: ['wd purple', 'wd red', 'wd black', 'disco duro nas', 'sandisk extreme'], brandExclusive: ['western digital', 'wd', 'sandisk'], rating: 4.8, reviews: 2900, trust: 98, desc: 'Almacenamiento masivo para videovigilancia, servidores NAS y centros de datos.' },
+  { name: 'Logitech México Oficial', domain: 'logitech.com/es-mx', category: 'tecnologia', keywords: ['mx master', 'teclado mx keys', 'rally bar', 'videoconferencia', 'meetup'], brandExclusive: ['logitech'], rating: 4.9, reviews: 3800, trust: 98, desc: 'Periféricos ergonómicos y sistemas de salas de videoconferencia Microsoft Teams / Zoom.' },
+  { name: 'Apple México Empresas', domain: 'apple.com/mx', category: 'tecnologia', keywords: ['macbook pro', 'macbook air', 'ipad pro', 'imac m3', 'mac mini', 'iphone'], brandExclusive: ['apple', 'macbook', 'ipad', 'imac'], rating: 4.9, reviews: 5400, trust: 99, desc: 'Equipos Apple empresariales con implementación Zero-Touch y AppleCare for Enterprise.' },
+  { name: 'Bosch Herramientas Eléctricas', domain: 'bosch-herramientas.com.mx', category: 'ferreteria', keywords: ['taladro percutor bosch', 'nivel laser', 'amoladora', 'medidor de distancia'], brandExclusive: ['bosch'], rating: 4.8, reviews: 2400, trust: 98, desc: 'Herramientas electroportátiles profesionales de máxima ingeniería alemana.' },
+  { name: 'DeWalt México Oficial', domain: 'dewalt.com.mx', category: 'ferreteria', keywords: ['taladro 20v max', 'rotomartillo sds', 'sierra ingletadora', 'atornillador de impacto'], brandExclusive: ['dewalt'], rating: 4.8, reviews: 2800, trust: 98, desc: 'Herramientas de potencia para construcción pesada y carpintería profesional.' },
+  { name: 'Makita México', domain: 'makita.com.mx', category: 'ferreteria', keywords: ['makita 18v', 'esmeril makita', 'cepillo electrico', 'sierra circular makita'], brandExclusive: ['makita'], rating: 4.8, reviews: 2100, trust: 97, desc: 'Pioneros en motores sin carbones (Brushless) y maquinaria de construcción.' },
+  { name: 'Milwaukee Tool México', domain: 'milwaukeetool.mx', category: 'ferreteria', keywords: ['m18 fuel', 'packout', 'cajas packout', 'llave de impacto milwaukee'], brandExclusive: ['milwaukee'], rating: 4.9, reviews: 2600, trust: 99, desc: 'Soluciones heavy-duty para mecánicos, electricistas y constructores.' },
+  { name: 'Helvex Oficial', domain: 'helvex.com.mx', category: 'ferreteria', keywords: ['fluxometro', 'llave con sensor', 'regadera institucional', 'griferia helvex'], brandExclusive: ['helvex'], rating: 4.8, reviews: 1650, trust: 97, desc: 'Grifería y muebles de baño institucionales de alta eficiencia hídrica.' },
+  { name: 'Rotoplas México', domain: 'rotoplas.com.mx', category: 'ferreteria', keywords: ['tinaco', 'cisterna', 'bomba de agua', 'filtro de agua', 'tuboplus'], brandExclusive: ['rotoplas'], rating: 4.8, reviews: 3100, trust: 98, desc: 'Almacenamiento, conducción y purificación de agua institucional.' },
+  { name: 'Cemex Concretos', domain: 'cemexmexico.com', category: 'ferreteria', keywords: ['cemento tolteca', 'cemento monterrey', 'bulto de cemento', 'mortero'], brandExclusive: ['cemex', 'tolteca', 'monterrey'], rating: 4.8, reviews: 4200, trust: 98, desc: 'Materiales cementantes y soluciones integrales de construcción.' },
+  { name: 'MSA The Safety Company', domain: 'msasafety.com', category: 'seguridad_industrial', keywords: ['casco v-gard', 'detector de gas altair', 'arnes workman', 'linea de vida msa'], brandExclusive: ['msa'], rating: 4.9, reviews: 1950, trust: 99, desc: 'Protección de cabeza, detección de gases tóxicos y rescate en espacios confinados.' },
+  { name: 'Honeywell Industrial Safety', domain: 'honeywell.com', category: 'seguridad_industrial', keywords: ['guantes honeywell', 'arnes miller', 'lentes uvex', 'respirador north'], brandExclusive: ['honeywell'], rating: 4.8, reviews: 2200, trust: 98, desc: 'Protección personal integral y sistemas anticaídas Miller.' },
+  { name: 'Ansell México', domain: 'ansell.com', category: 'seguridad_industrial', keywords: ['guantes hyflex', 'guantes alpha tec', 'proteccion quimica', 'touchntuff'], brandExclusive: ['ansell'], rating: 4.8, reviews: 1400, trust: 97, desc: 'Líder en protección para manos y prendas de protección química.' },
+  { name: 'Riverline Ergonomics', domain: 'riverline.com.mx', category: 'seguridad_industrial', keywords: ['botas riverline', 'calzado ergonomico', 'bota con casquillo ligera'], brandExclusive: ['riverline'], rating: 4.7, reviews: 980, trust: 95, desc: 'Calzado industrial con tecnología de absorción de impacto y confort.' },
+  { name: 'Scribe México', domain: 'scribe.com.mx', category: 'papeleria', keywords: ['papel bond fotocopia', 'cuaderno scribe', 'libreta profesional', 'resma de hojas'], brandExclusive: ['scribe'], rating: 4.8, reviews: 3400, trust: 97, desc: 'Papel cortado para impresión de alta velocidad sin atascos.' },
+  { name: 'BIC México', domain: 'bic.com.mx', category: 'papeleria', keywords: ['boligrafo cristal', 'marcador permanente', 'marcatextos', 'corrector líquido'], brandExclusive: ['bic'], rating: 4.8, reviews: 2900, trust: 97, desc: 'Instrumentos de escritura confiables de alto rendimiento.' },
+  { name: 'Pilot México', domain: 'pilotpen.com.mx', category: 'papeleria', keywords: ['pluma g2', 'boligrafo borrable frixion', 'plumon para pizarron', 'v5 hi-tecpoint'], brandExclusive: ['pilot'], rating: 4.8, reviews: 1800, trust: 96, desc: 'Bolígrafos de gel de alta precisión y rotuladores recargables.' },
+  { name: 'Steelcase México', domain: 'steelcase.com', category: 'mobiliario', keywords: ['silla gesture', 'silla leap', 'escritorio migration', 'mobiliario acustico'], brandExclusive: ['steelcase'], rating: 4.9, reviews: 1700, trust: 99, desc: 'Arquitectura interior y mobiliario ergonómico para corporativos globales.' },
+  { name: 'Haworth México', domain: 'haworth.com', category: 'mobiliario', keywords: ['silla zody', 'silla fern', 'paneles divisorios', 'mesas colaborativas'], brandExclusive: ['haworth'], rating: 4.9, reviews: 1300, trust: 98, desc: 'Espacios de trabajo centrados en el bienestar y sostenibilidad.' },
+  { name: 'Hanna Instruments México', domain: 'hannainst.com.mx', category: 'laboratorio', keywords: ['potenciometro', 'medidor de ph', 'conductimetro', 'fotometro', 'turbidimetro'], brandExclusive: ['hanna'], rating: 4.8, reviews: 1100, trust: 97, desc: 'Instrumentación electroquímica para análisis de agua, alimentos y suelos.' },
+  { name: 'Fluke Corporation México', domain: 'fluke.com/es-mx', category: 'electricidad', keywords: ['multimetro fluke 87v', 'pinza amperimetrica', 'camara termografica', 'megohmetro'], brandExclusive: ['fluke'], rating: 4.9, reviews: 2900, trust: 99, desc: 'Estándar mundial en herramientas de prueba y medición electrónica.' },
+  { name: 'Mitutoyo México', domain: 'mitutoyo.com.mx', category: 'ferreteria', keywords: ['vernier digital', 'micrometro', 'comparador de caratula', 'durómetro'], brandExclusive: ['mitutoyo'], rating: 4.9, reviews: 1400, trust: 99, desc: 'Instrumentos de metrología dimensional y control de calidad industrial.' },
+  { name: 'Eaton Corporation México', domain: 'eaton.com/mx', category: 'electricidad', keywords: ['ups eaton 9px', 'tripp lite no break', 'supresor de picos', 'pdu para rack'], brandExclusive: ['eaton', 'tripp lite'], rating: 4.8, reviews: 2400, trust: 98, desc: 'Respaldo energético ininterrumpible, PDUs y racks para servidores.' },
+  { name: 'ABB México Electrificación', domain: 'new.abb.com/mx', category: 'electricidad', keywords: ['interruptor caja moldeada', 'variador de frecuencia', 'contactores', 'relevador'], brandExclusive: ['abb'], rating: 4.9, reviews: 2100, trust: 99, desc: 'Equipos de distribución eléctrica y automatización industrial.' },
+  { name: 'Siemens México', domain: 'siemens.com/mx', category: 'electricidad', keywords: ['plc s7-1200', 'interruptor siemens', 'guardamotor', 'sensor inductivo'], brandExclusive: ['siemens'], rating: 4.9, reviews: 3300, trust: 99, desc: 'Automatización, electrificación y digitalización industrial.' },
+  { name: 'Bticino / Legrand México', domain: 'bticino.com.mx', category: 'electricidad', keywords: ['placa living now', 'apagador matix', 'canaleta legrand', 'gabinete legrand'], brandExclusive: ['bticino', 'legrand'], rating: 4.8, reviews: 1900, trust: 97, desc: 'Sistemas de canalización, accesorios eléctricos y domótica comercial.' },
+  { name: 'Daikin México', domain: 'daikin.com.mx', category: 'hvac', keywords: ['vrv daikin', 'minisplit daikin', 'chiller magnetico', 'bomba de calor'], brandExclusive: ['daikin'], rating: 4.9, reviews: 1800, trust: 98, desc: 'Líder global en sistemas de volumen de refrigerante variable (VRV).' },
+  { name: 'Trane México Climas', domain: 'trane.com/commercial/latin-america/mx', category: 'hvac', keywords: ['aire acondicionado trane', 'paquete trane', 'chiller enfriado por agua'], brandExclusive: ['trane'], rating: 4.8, reviews: 1500, trust: 98, desc: 'Soluciones de confort térmico y climatización para grandes edificios.' },
+  { name: 'CONTPAQi Sistemas', domain: 'contpaqi.com', category: 'software', keywords: ['contpaqi contabilidad', 'contpaqi nominas', 'contpaqi factura electronica', 'licencia anual'], brandExclusive: ['contpaqi'], rating: 4.8, reviews: 2600, trust: 98, desc: 'Software contable y nóminas líder en cumplimiento con el SAT y CFDI 4.0.' },
+  { name: 'Aspel de México', domain: 'aspel.com.mx', category: 'software', keywords: ['aspel sae', 'aspel noi', 'aspel coe', 'aspel caja', 'licencia aspel'], brandExclusive: ['aspel'], rating: 4.7, reviews: 2100, trust: 96, desc: 'Sistemas de administración empresarial para control de inventarios y facturación.' },
+  { name: 'Autodesk México Oficial', domain: 'autodesk.mx', category: 'software', keywords: ['autocad', 'revit', 'civil 3d', 'maya', 'licencia autodesk'], brandExclusive: ['autodesk', 'autocad'], rating: 4.9, reviews: 3400, trust: 99, desc: 'Software de diseño 2D/3D, arquitectura, ingeniería y construcción.' },
 ]
 
 export function getMasterSupplierDatabase(): SupplierEntry[] {
@@ -780,13 +790,14 @@ export function getMasterSupplierDatabase(): SupplierEntry[] {
       category: item.category,
       categoryLabel: CATEGORY_METADATA[item.category].label,
       keywords: item.keywords,
-      buildUrl: createGenericUrl(item.domain, '/search?', 'q'),
+      buildUrl: (text, brand, model) => resolveDirectProductUrl(item.domain, text, brand, model),
       baseRating: item.rating,
       reviews: item.reviews,
       trustBaseline: item.trust,
       verified: true,
       country: 'MX',
       description: item.desc,
+      brandExclusive: item.brandExclusive,
     })
   }
 
@@ -852,7 +863,9 @@ export function matchSuppliersForQuery(
   model?: string,
   limit = 8,
 ): { category: SupplierCategory; categoryLabel: string; suppliers: SupplierEntry[] } {
-  const fullText = `${brand || ''} ${queryText} ${model || ''}`.toLowerCase().trim()
+  const { brand: cleanBrand, model: cleanModel, cleanQuery } = extractCleanProduct(queryText, brand, model)
+  const fullText = `${cleanBrand || ''} ${cleanQuery} ${cleanModel || ''}`.toLowerCase().trim()
+  const targetBrandLower = (cleanBrand || '').toLowerCase().trim()
 
   const categoryScores: Record<SupplierCategory, number> = {
     tecnologia: 0,
@@ -892,35 +905,101 @@ export function matchSuppliersForQuery(
   }
 
   if (maxScore <= 1) {
-    if (fullText.includes('dell') || fullText.includes('hp') || fullText.includes('pc') || fullText.includes('laptop')) {
+    if (
+      fullText.includes('dell') ||
+      fullText.includes('hp') ||
+      fullText.includes('lenovo') ||
+      fullText.includes('thinkcentre') ||
+      fullText.includes('pc') ||
+      fullText.includes('laptop') ||
+      fullText.includes('computadora')
+    ) {
       bestCategory = 'tecnologia'
     } else {
       bestCategory = 'general'
     }
   }
 
-  const categorySuppliers = ALL_SUPPLIERS.filter(
-    (s) => s.category === bestCategory || s.category === 'general' || s.id === 'sup-tech-001' || s.id === 'sup-tech-002',
-  )
+  // Filter candidates:
+  // 1. Never include login-gated wholesale distributors requiring B2B passwords (e.g. CT, CVA, Ingram)
+  // 2. Never include synthetic placeholder regional domains
+  // 3. Category match (or global marketplace)
+  // 4. Strict brand exclusivity check:
+  //    Single-brand manufacturer stores (e.g. Cisco, Fortinet, Dell, Lenovo, HP, Apple)
+  //    MUST ONLY be included if the queried product brand actually matches!
+  const candidates = ALL_SUPPLIERS.filter((s) => {
+    // Exclude wholesale distributors behind login walls
+    if (s.requiresLogin) return false
 
-  const pool = categorySuppliers.length >= 4 ? categorySuppliers : ALL_SUPPLIERS.slice(0, 10)
+    // Exclude synthetic regional placeholders from live quotes
+    if (s.id.startsWith('sup-dir-')) return false
 
-  const ranked = pool.map((sup) => {
-    let matchRank = sup.trustBaseline || 90
+    // Category match
+    const catMatch =
+      s.category === bestCategory ||
+      s.category === 'general' ||
+      s.id === 'sup-tech-001' || // Amazon
+      s.id === 'sup-tech-002'    // MercadoLibre
+
+    if (!catMatch) return false
+
+    // Brand-exclusive manufacturer check
+    if (s.brandExclusive && s.brandExclusive.length > 0) {
+      const matchesBrand = s.brandExclusive.some((b) => {
+        if (targetBrandLower && (targetBrandLower.includes(b) || b.includes(targetBrandLower))) return true
+        if (fullText.includes(b)) return true
+        return false
+      })
+      // If store is Fortinet/Cisco and product is Lenovo ThinkCentre, REJECT!
+      if (!matchesBrand) return false
+    }
+
+    return true
+  })
+
+  // Rank candidates
+  const ranked = candidates.map((sup) => {
+    let rank = sup.trustBaseline || 90
+
+    // 1. Official Manufacturer Store of the exact brand gets #1 priority
+    if (
+      sup.brandExclusive &&
+      targetBrandLower &&
+      sup.brandExclusive.some((b) => targetBrandLower.includes(b) || b.includes(targetBrandLower))
+    ) {
+      rank += 120
+    }
+
+    // 2. Marketplaces with live checkout resolution get high priority
+    if (sup.domain.includes('amazon') || sup.domain.includes('mercadolibre')) {
+      rank += 40
+    } else if (
+      sup.domain.includes('cyberpuerta') ||
+      sup.domain.includes('officedepot') ||
+      sup.domain.includes('homedepot')
+    ) {
+      rank += 30
+    }
+
+    // 3. Keyword matching in title
     const kws = Array.isArray(sup.keywords) ? sup.keywords : []
     for (const kw of kws) {
       if (typeof kw === 'string' && fullText.includes(kw.toLowerCase())) {
-        matchRank += 15
+        rank += 10
       }
     }
-    return { supplier: sup, rank: matchRank }
+
+    return { supplier: sup, rank }
   })
 
   ranked.sort((a, b) => b.rank - a.rank)
   let selected = ranked.slice(0, limit).map((r) => r.supplier)
 
   if (selected.length === 0) {
-    selected = MASTER_SUPPLIER_CATALOG.slice(0, Math.min(limit, MASTER_SUPPLIER_CATALOG.length))
+    selected = MASTER_SUPPLIER_CATALOG.filter((s) => !s.requiresLogin && !s.brandExclusive).slice(
+      0,
+      Math.min(limit, 8),
+    )
   }
 
   return {

@@ -288,9 +288,64 @@ export function resolveDirectProductUrl(
     return `https://www.syscom.mx/principal/busqueda?q=${encodedModel}&ref=mercant`
   }
 
-  // OfficeDepot
+  // OfficeDepot México
   if (normDomain.includes('officedepot')) {
     return `https://www.officedepot.com.mx/officedepot/en/Buscar?text=${encodedModel}&ref=mercant`
+  }
+
+  // OfficeMax México
+  if (normDomain.includes('officemax')) {
+    return `https://www.officemax.com.mx/buscar?q=${encodedModel}&ref=mercant`
+  }
+
+  // PCel (uses /buscar?search=)
+  if (normDomain.includes('pcel.com')) {
+    return `https://pcel.com/buscar?search=${encodedModel}&ref=mercant`
+  }
+
+  // DDTech (uses /buscar?buscar=)
+  if (normDomain.includes('ddtech.mx')) {
+    return `https://ddtech.mx/buscar?buscar=${encodedModel}&ref=mercant`
+  }
+
+  // Intercompras (uses /buscar.php?q=)
+  if (normDomain.includes('intercompras.com')) {
+    return `https://intercompras.com/buscar.php?q=${encodedModel}&ref=mercant`
+  }
+
+  // Doto México (uses /buscar?q=)
+  if (normDomain.includes('doto.com.mx')) {
+    return `https://www.doto.com.mx/buscar?q=${encodedModel}&ref=mercant`
+  }
+
+  // Liverpool México
+  if (normDomain.includes('liverpool.com.mx')) {
+    return `https://www.liverpool.com.mx/tienda?s=${encodedModel}&ref=mercant`
+  }
+
+  // Walmart México
+  if (normDomain.includes('walmart.com.mx')) {
+    return `https://www.walmart.com.mx/search?q=${encodedModel}&ref=mercant`
+  }
+
+  // Sanborns México
+  if (normDomain.includes('sanborns.com.mx')) {
+    return `https://www.sanborns.com.mx/buscar/${encodedModel}&ref=mercant`
+  }
+
+  // Costco México
+  if (normDomain.includes('costco.com.mx')) {
+    return `https://www.costco.com.mx/search?text=${encodedModel}&ref=mercant`
+  }
+
+  // Sams Club México
+  if (normDomain.includes('sams.com.mx')) {
+    return `https://www.sams.com.mx/search?q=${encodedModel}&ref=mercant`
+  }
+
+  // Lumen México (Papelería y Cómputo)
+  if (normDomain.includes('lumen.com.mx')) {
+    return `https://lumen.com.mx/catalogsearch/result/?q=${encodedModel}&ref=mercant`
   }
 
   // Steren
@@ -306,6 +361,36 @@ export function resolveDirectProductUrl(
   // HomeDepot
   if (normDomain.includes('homedepot.com.mx')) {
     return `https://www.homedepot.com.mx/busqueda?q=${encodedModel}&ref=mercant`
+  }
+
+  // Apple México
+  if (normDomain.includes('apple.com')) {
+    return `https://www.apple.com/mx/search/${encodedModel}?ref=mercant`
+  }
+
+  // Logitech México
+  if (normDomain.includes('logitech.com')) {
+    return `https://www.logitech.com/es-mx/search.html?q=${encodedModel}&ref=mercant`
+  }
+
+  // Cisco Systems
+  if (normDomain.includes('cisco.com')) {
+    return `https://www.cisco.com/c/es_mx/search.html#q=${encodedModel}&ref=mercant`
+  }
+
+  // Fortinet
+  if (normDomain.includes('fortinet.com')) {
+    return `https://www.fortinet.com/search#q=${encodedModel}&ref=mercant`
+  }
+
+  // TP-Link
+  if (normDomain.includes('tp-link.com')) {
+    return `https://www.tp-link.com/mx/search/?q=${encodedModel}&ref=mercant`
+  }
+
+  // DeWalt
+  if (normDomain.includes('dewalt.com.mx')) {
+    return `https://www.dewalt.com.mx/buscar?q=${encodedModel}&ref=mercant`
   }
 
   // Default clean distributor URL
