@@ -19,12 +19,12 @@ import { sleep } from '@/lib/utils'
 // ---------------------------------------------------------------------------
 
 const client = new OpenAI({
-  apiKey: process.env.NVIDIA_API_KEY ?? '',
+  apiKey: process.env.NVIDIA_API_KEY || 'dummy-key-for-build-time',
   baseURL:
-    process.env.NVIDIA_BASE_URL ?? 'https://integrate.api.nvidia.com/v1',
+    process.env.NVIDIA_BASE_URL || 'https://integrate.api.nvidia.com/v1',
 })
 
-const MODEL = process.env.NVIDIA_MODEL ?? 'moonshotai/kimi-k3'
+const MODEL = process.env.NVIDIA_MODEL || 'moonshotai/kimi-k3'
 
 // ---------------------------------------------------------------------------
 // Types
