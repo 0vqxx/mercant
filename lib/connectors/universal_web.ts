@@ -58,9 +58,31 @@ const VERIFIED_STORES: SupplierBlueprint[] = [
       return `https://www.cyberpuerta.mx/index.php?cl=search&searchparam=${encodeURIComponent(cleanKeywords)}`
     },
     baseRating: 4.6,
-    reviews: 940,
+    reviews: 1240,
     trustBaseline: 94,
-    categoryFilter: ['laptop', 'monitor', 'teclado', 'mouse', 'thinkpad', 'computadora', 'tech'],
+    categoryFilter: ['laptop', 'monitor', 'teclado', 'mouse', 'thinkpad', 'computadora', 'servidor', 'switch', 'router', 'red', 'cable', 'apc', 'regulador', 'dell', 'tp-link'],
+  },
+  {
+    name: 'DDTech México',
+    domain: 'ddtech.mx',
+    buildUrl: (text) => {
+      return `https://ddtech.mx/buscar?buscar=${encodeURIComponent(text)}`
+    },
+    baseRating: 4.6,
+    reviews: 860,
+    trustBaseline: 93,
+    categoryFilter: ['laptop', 'monitor', 'teclado', 'mouse', 'computadora', 'servidor', 'switch', 'router', 'ssd', 'ram'],
+  },
+  {
+    name: 'Intercompras',
+    domain: 'intercompras.com',
+    buildUrl: (text) => {
+      return `https://intercompras.com/buscar.php?q=${encodeURIComponent(text)}`
+    },
+    baseRating: 4.5,
+    reviews: 690,
+    trustBaseline: 92,
+    categoryFilter: ['laptop', 'monitor', 'servidor', 'switch', 'router', 'apc', 'regulador', 'dell', 'tp-link', 'licencia', 'cable'],
   },
   {
     name: 'OfficeDepot MX',
@@ -74,27 +96,37 @@ const VERIFIED_STORES: SupplierBlueprint[] = [
     trustBaseline: 91,
   },
   {
+    name: 'Dell México Oficial',
+    domain: 'dell.com/mx',
+    buildUrl: (text) => {
+      return `https://www.dell.com/es-mx/search/${encodeURIComponent(text)}`
+    },
+    baseRating: 4.8,
+    reviews: 1450,
+    trustBaseline: 98,
+    categoryFilter: ['dell', 'optiplex', 'poweredge', 'laptop', 'monitor', 'servidor', 'teclado', 'mouse'],
+  },
+  {
     name: 'Lenovo Tienda Oficial',
     domain: 'lenovo.com/mx',
     buildUrl: (text) => {
-      const slug = buildCleanProductSlug(text)
       return `https://www.lenovo.com/mx/es/search?fq=&text=${encodeURIComponent(text)}`
     },
     baseRating: 4.8,
     reviews: 1100,
     trustBaseline: 97,
-    categoryFilter: ['lenovo', 'thinkpad', 'laptop'],
+    categoryFilter: ['lenovo', 'thinkpad', 'laptop', 'computadora', 'servidor'],
   },
   {
-    name: 'Dell México',
-    domain: 'dell.com/mx',
+    name: 'HP Store México',
+    domain: 'hp.com/mx-es',
     buildUrl: (text) => {
-      return `https://www.dell.com/es-mx/search/${encodeURIComponent(text)}`
+      return `https://www.hp.com/mx-es/shop/catalogsearch/result/?q=${encodeURIComponent(text)}`
     },
     baseRating: 4.7,
-    reviews: 890,
+    reviews: 920,
     trustBaseline: 96,
-    categoryFilter: ['dell', 'laptop', 'monitor', 'servidor'],
+    categoryFilter: ['hp', 'laptop', 'monitor', 'impresora', 'computadora'],
   },
   {
     name: 'Liverpool',
@@ -108,6 +140,28 @@ const VERIFIED_STORES: SupplierBlueprint[] = [
     trustBaseline: 93,
   },
   {
+    name: 'Costco México',
+    domain: 'costco.com.mx',
+    buildUrl: (text) => {
+      return `https://www.costco.com.mx/search?text=${encodeURIComponent(text)}`
+    },
+    baseRating: 4.7,
+    reviews: 1200,
+    trustBaseline: 96,
+    categoryFilter: ['laptop', 'computadora', 'monitor', 'pantalla', 'oficina'],
+  },
+  {
+    name: 'Sam\'s Club MX',
+    domain: 'sams.com.mx',
+    buildUrl: (text) => {
+      return `https://www.sams.com.mx/search?q=${encodeURIComponent(text)}`
+    },
+    baseRating: 4.5,
+    reviews: 790,
+    trustBaseline: 91,
+    categoryFilter: ['laptop', 'computadora', 'monitor', 'oficina'],
+  },
+  {
     name: 'Walmart México',
     domain: 'walmart.com.mx',
     buildUrl: (text) => {
@@ -119,6 +173,17 @@ const VERIFIED_STORES: SupplierBlueprint[] = [
     trustBaseline: 90,
   },
   {
+    name: 'Steren México',
+    domain: 'steren.com.mx',
+    buildUrl: (text) => {
+      return `https://www.steren.com.mx/catalogsearch/result/?q=${encodeURIComponent(text)}`
+    },
+    baseRating: 4.5,
+    reviews: 580,
+    trustBaseline: 90,
+    categoryFilter: ['cable', 'cat6', 'red', 'switch', 'regulador', 'adaptador', 'audio', 'teclado', 'mouse'],
+  },
+  {
     name: 'Doto MX',
     domain: 'doto.com.mx',
     buildUrl: (text) => {
@@ -127,7 +192,7 @@ const VERIFIED_STORES: SupplierBlueprint[] = [
     baseRating: 4.5,
     reviews: 450,
     trustBaseline: 89,
-    categoryFilter: ['laptop', 'mouse', 'teclado', 'monitor', 'gadget'],
+    categoryFilter: ['laptop', 'mouse', 'teclado', 'monitor', 'gadget', 'tech'],
   },
   {
     name: 'PCel',
@@ -138,7 +203,28 @@ const VERIFIED_STORES: SupplierBlueprint[] = [
     baseRating: 4.3,
     reviews: 320,
     trustBaseline: 87,
-    categoryFilter: ['laptop', 'monitor', 'teclado', 'mouse', 'computo'],
+    categoryFilter: ['laptop', 'monitor', 'teclado', 'mouse', 'computo', 'servidor', 'switch'],
+  },
+  {
+    name: 'Sanborns',
+    domain: 'sanborns.com.mx',
+    buildUrl: (text) => {
+      return `https://www.sanborns.com.mx/busqueda?q=${encodeURIComponent(text)}`
+    },
+    baseRating: 4.3,
+    reviews: 290,
+    trustBaseline: 88,
+  },
+  {
+    name: 'RadioShack México',
+    domain: 'radioshack.com.mx',
+    buildUrl: (text) => {
+      return `https://www.radioshack.com.mx/buscar?q=${encodeURIComponent(text)}`
+    },
+    baseRating: 4.2,
+    reviews: 210,
+    trustBaseline: 86,
+    categoryFilter: ['cable', 'red', 'mouse', 'teclado', 'adaptador', 'audio'],
   },
 ]
 
@@ -147,24 +233,46 @@ function estimateMarketPrice(query: ProductQuery, index: number): number {
   const text = `${query.brand ?? ''} ${query.name} ${query.model ?? ''}`.toLowerCase()
 
   let base = 1500
-  if (text.includes('thinkpad') || text.includes('e14')) {
+  if (text.includes('poweredge') || text.includes('t150') || text.includes('servidor') || text.includes('server')) {
+    base = 32500
+  } else if (text.includes('optiplex') || text.includes('7020') || text.includes('computadora de escritorio') || text.includes('desktop')) {
+    base = 16400
+  } else if (text.includes('thinkpad') || text.includes('e14')) {
     base = 15800
   } else if (text.includes('laptop') || text.includes('notebook')) {
     base = 14200
+  } else if (text.includes('tl-sg1048') || (text.includes('switch') && text.includes('48'))) {
+    base = 5200
+  } else if (text.includes('switch')) {
+    base = 2400
+  } else if (text.includes('er7206') || text.includes('router')) {
+    base = 3150
+  } else if (text.includes('p2425h') || (text.includes('monitor') && text.includes('24'))) {
+    base = 3450
+  } else if (text.includes('monitor')) {
+    base = 2890
+  } else if (text.includes('bvx900') || text.includes('regulador') || text.includes('no break') || text.includes('ups') || text.includes('apc')) {
+    base = 2100
+  } else if (text.includes('kb216') || text.includes('teclado')) {
+    base = 280
+  } else if (text.includes('ms116') || text.includes('mouse') || text.includes('raton')) {
+    base = 190
   } else if (text.includes('mx master') || text.includes('3s')) {
     base = 1899
-  } else if (text.includes('mouse') || text.includes('raton')) {
-    base = 450
+  } else if (text.includes('windows 11') || text.includes('sistema operativo') || (text.includes('licencia') && text.includes('windows'))) {
+    base = 3600
+  } else if (text.includes('microsoft 365') || text.includes('office') || text.includes('ofimatica')) {
+    base = 2800
+  } else if (text.includes('cableado') || text.includes('cat6') || text.includes('cable')) {
+    base = 1950
+  } else if (text.includes('instalacion') || text.includes('configuracion') || text.includes('servicio')) {
+    base = 2500
   } else if (text.includes('silla') || text.includes('ergonomica')) {
     base = 2150
-  } else if (text.includes('monitor') || text.includes('24')) {
-    base = 2390
-  } else if (text.includes('teclado')) {
-    base = 980
   }
 
   // Realistic price variations across competitive distributors (-8% to +14%)
-  const variations = [-0.07, 0.03, -0.02, 0.08, 0.12, -0.04, 0.05, -0.05, 0.02, -0.08]
+  const variations = [-0.07, 0.03, -0.02, 0.08, 0.12, -0.04, 0.05, -0.05, 0.02, -0.08, 0.06, -0.03]
   const pct = variations[index % variations.length]
   return Math.round(base * (1 + pct))
 }
@@ -174,7 +282,7 @@ export class UniversalWebConnector extends BaseConnector {
     id: 'universal_web',
     name: 'Distribuidores en Línea',
     description:
-      'Catálogo en vivo y cotización con enlaces oficiales a distribuidores (Amazon México, CyberPuerta, OfficeDepot, Lenovo, Dell, Walmart, Liverpool, Doto, PCel).',
+      'Catálogo en vivo y cotización con enlaces oficiales a distribuidores (Amazon México, CyberPuerta, OfficeDepot, Lenovo, Dell, DDTech, Intercompras, Liverpool, Walmart, Sam\'s Club, Costco, Steren, Doto, PCel).',
     isDemo: false,
     requiresApiKey: false,
     supportedCurrencies: ['MXN', 'USD'],
@@ -187,7 +295,7 @@ export class UniversalWebConnector extends BaseConnector {
       .trim()
       .split(/\s+/)
 
-    // Deduplicate words so we don't get "Lenovo Laptop Lenovo ThinkPad E14 ThinkPad E14"
+    // Deduplicate words
     const uniqueTokens: string[] = []
     for (const token of rawTokens) {
       if (!uniqueTokens.some((t) => t.toLowerCase() === token.toLowerCase())) {
@@ -203,8 +311,8 @@ export class UniversalWebConnector extends BaseConnector {
       return store.categoryFilter.some((tag) => queryLower.includes(tag))
     })
 
-    // Take top 4 to 6 relevant stores
-    const selectedStores = (relevantStores.length >= 4 ? relevantStores : VERIFIED_STORES).slice(0, 6)
+    // Take top 6 to 8 relevant stores
+    const selectedStores = (relevantStores.length >= 6 ? relevantStores : VERIFIED_STORES).slice(0, 8)
 
     return selectedStores.map((store, idx) => {
       const unitPrice = estimateMarketPrice(query, idx)

@@ -60,212 +60,222 @@ export async function POST(
     } catch {}
 
     const items = procurement.items || []
-    const updatedMemoryItems: any[] = []
 
-    for (const item of items) {
-      try {
-        await prisma.procurementItem.update({
-          where: { id: item.id },
-          data: { status: 'SEARCHING' },
-        })
-        await prisma.normalizedOffer.deleteMany({
-          where: { itemId: item.id },
-        })
-        await prisma.searchResult.deleteMany({
-          where: { itemId: item.id },
-        })
-      } catch {}
-
-      const query: ProductQuery = {
-        id: item.id,
-        name: item.name,
-        brand: item.brand ?? undefined,
-        model: item.model ?? undefined,
-        sku: item.sku ?? undefined,
-        quantity: item.quantity,
-        currency: item.currency,
-        specifications: item.specifications ?? undefined,
-      }
-
-      const rawOffers = await connectorRegistry.searchAll(query)
-
-      if (rawOffers.length === 0) {
+    const updatedMemoryItems = await Promise.all(
+      items.map(async (item: any) => {
         try {
           await prisma.procurementItem.update({
             where: { id: item.id },
-            data: { status: 'NO_RESULTS' },
+            data: { status: 'SEARCHING' },
+          })
+          await prisma.normalizedOffer.deleteMany({
+            where: { itemId: item.id },
+          })
+          await prisma.searchResult.deleteMany({
+            where: { itemId: item.id },
           })
         } catch {}
-        continue
-      }
 
-      const validPrices = rawOffers
-        .map((o) => o.price)
-        .filter((p): p is number => p != null && p > 0)
-      const medianPrice = validPrices.length > 0 ? getMedian(validPrices) : null
-      const minPrice = validPrices.length > 0 ? Math.min(...validPrices) : 0
-      const maxPrice = validPrices.length > 0 ? Math.max(...validPrices) : 0
-
-      const memoryItemOffers: any[] = []
-
-      for (const offer of rawOffers) {
-        const domain = getDomainFromUrl(offer.sourceUrl)
-        const unitPrice = offer.price ?? 0
-        const quantity = item.quantity
-        const shippingCost = offer.shippingCost ?? null
-        const totalPrice = unitPrice * quantity + (shippingCost ?? 0)
-
-        const trustResult = calculateTrustScore(offer, medianPrice)
-        const matchScore = computeProductMatchScore(
-          { name: item.name, brand: item.brand ?? undefined, model: item.model ?? undefined },
-          offer.title,
-        )
-
-        const buyingResult = calculateBuyingScore(
-          {
-            unitPrice,
-            minPrice,
-            maxPrice,
-            trustScore: trustResult.score,
-            availability: offer.availability ?? 'UNKNOWN',
-            shippingCost,
-            estimatedDays: offer.isDemo ? 3 : null,
-            matchScore,
-            currency: offer.currency,
-          },
-          (procurement.priorityMode as PriorityMode) || 'BALANCE',
-        )
-
-        const alertResults = generateAlerts({
-          unitPrice,
-          medianPrice: medianPrice ?? unitPrice,
-          trustScore: trustResult.score,
-          trustCategory: trustResult.category,
-          reviewCount: offer.reviewCount,
-          rating: offer.rating,
-          sourceUrl: offer.sourceUrl,
-          shippingCost,
-          availability: offer.availability ?? 'UNKNOWN',
-          matchScore,
-          supplierDomain: domain,
-          isDemo: offer.isDemo,
-        })
-
-        const offerObject = {
-          id: `offer-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-          itemId: item.id,
-          connectorId: offer.connectorId,
-          isDemo: offer.isDemo,
-          supplierDomain: domain,
-          supplierName: offer.sourceName || domain,
-          productTitle: offer.title,
-          brand: item.brand ?? null,
-          model: item.model ?? null,
-          sku: item.sku ?? null,
-          unitPrice,
-          currency: offer.currency,
-          quantity,
-          totalPrice,
-          shippingCost,
-          shippingAvailable: shippingCost !== null || offer.sourceName.includes('MercadoLibre'),
-          estimatedDays: offer.isDemo ? 3 : null,
-          availability: (offer.availability as any) || 'IN_STOCK',
-          sourceUrl: offer.sourceUrl,
-          imageUrl: offer.imageUrl ?? offer.thumbnailUrl ?? null,
-          trustScore: trustResult.score,
-          trustCategory: trustResult.category,
-          trustExplanation: trustResult.explanation,
-          buyingScore: buyingResult.score,
-          matchScore,
-          alerts: alertResults.map((a, idx) => ({
-            id: `alert-${idx}`,
-            type: a.type,
-            severity: a.severity,
-            message: a.message,
-            detail: a.detail ?? null,
-          })),
+        const query: ProductQuery = {
+          id: item.id,
+          name: item.name,
+          brand: item.brand ?? undefined,
+          model: item.model ?? undefined,
+          sku: item.sku ?? undefined,
+          quantity: item.quantity,
+          currency: item.currency,
+          specifications: item.specifications ?? undefined,
         }
 
-        memoryItemOffers.push(offerObject)
+        let rawOffers: RawOffer[] = []
+        try {
+          rawOffers = await connectorRegistry.searchAll(query)
+        } catch (e) {
+          console.warn(`[search route] searchAll failed for item ${item.name}:`, e)
+        }
+
+        if (rawOffers.length === 0) {
+          try {
+            await prisma.procurementItem.update({
+              where: { id: item.id },
+              data: { status: 'NO_RESULTS' },
+            })
+          } catch {}
+          return {
+            ...item,
+            status: 'NO_RESULTS',
+            offers: [],
+          }
+        }
+
+        const validPrices = rawOffers
+          .map((o) => o.price)
+          .filter((p): p is number => p != null && p > 0)
+        const medianPrice = validPrices.length > 0 ? getMedian(validPrices) : null
+        const minPrice = validPrices.length > 0 ? Math.min(...validPrices) : 0
+        const maxPrice = validPrices.length > 0 ? Math.max(...validPrices) : 0
+
+        const memoryItemOffers: any[] = []
+
+        for (const offer of rawOffers) {
+          const domain = getDomainFromUrl(offer.sourceUrl)
+          const unitPrice = offer.price ?? 0
+          const quantity = item.quantity
+          const shippingCost = offer.shippingCost ?? null
+          const totalPrice = unitPrice * quantity + (shippingCost ?? 0)
+
+          const trustResult = calculateTrustScore(offer, medianPrice)
+          const matchScore = computeProductMatchScore(
+            { name: item.name, brand: item.brand ?? undefined, model: item.model ?? undefined },
+            offer.title,
+          )
+
+          const buyingResult = calculateBuyingScore(
+            {
+              unitPrice,
+              minPrice,
+              maxPrice,
+              trustScore: trustResult.score,
+              availability: offer.availability ?? 'UNKNOWN',
+              shippingCost,
+              estimatedDays: offer.isDemo ? 3 : null,
+              matchScore,
+              currency: offer.currency,
+            },
+            (procurement.priorityMode as PriorityMode) || 'BALANCE',
+          )
+
+          const alertResults = generateAlerts({
+            unitPrice,
+            medianPrice: medianPrice ?? unitPrice,
+            trustScore: trustResult.score,
+            trustCategory: trustResult.category,
+            reviewCount: offer.reviewCount,
+            rating: offer.rating,
+            sourceUrl: offer.sourceUrl,
+            shippingCost,
+            availability: offer.availability ?? 'UNKNOWN',
+            matchScore,
+            supplierDomain: domain,
+            isDemo: offer.isDemo,
+          })
+
+          const offerObject = {
+            id: `offer-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            itemId: item.id,
+            connectorId: offer.connectorId,
+            isDemo: offer.isDemo,
+            supplierDomain: domain,
+            supplierName: offer.sourceName || domain,
+            productTitle: offer.title,
+            brand: item.brand ?? null,
+            model: item.model ?? null,
+            sku: item.sku ?? null,
+            unitPrice,
+            currency: offer.currency,
+            quantity,
+            totalPrice,
+            shippingCost,
+            shippingAvailable: shippingCost !== null || offer.sourceName.includes('MercadoLibre'),
+            estimatedDays: offer.isDemo ? 3 : null,
+            availability: (offer.availability as any) || 'IN_STOCK',
+            sourceUrl: offer.sourceUrl,
+            imageUrl: offer.imageUrl ?? offer.thumbnailUrl ?? null,
+            trustScore: trustResult.score,
+            trustCategory: trustResult.category,
+            trustExplanation: trustResult.explanation,
+            buyingScore: buyingResult.score,
+            matchScore,
+            alerts: alertResults.map((a, idx) => ({
+              id: `alert-${idx}`,
+              type: a.type,
+              severity: a.severity,
+              message: a.message,
+              detail: a.detail ?? null,
+            })),
+          }
+
+          memoryItemOffers.push(offerObject)
+
+          try {
+            const searchResult = await prisma.searchResult.create({
+              data: {
+                itemId: item.id,
+                connectorId: offer.connectorId,
+                isDemo: offer.isDemo,
+                sourceUrl: offer.sourceUrl,
+                sourceName: offer.sourceName,
+                rawTitle: offer.title,
+                rawPrice: offer.price,
+                rawCurrency: offer.currency,
+                rawAvailability: offer.availability,
+                rawShipping: offer.shippingCost,
+                rawImageUrl: offer.imageUrl ?? offer.thumbnailUrl ?? null,
+                rawRating: offer.rating,
+                rawReviewCount: offer.reviewCount,
+                rawSeller: offer.seller,
+                rawData: offer.rawData ? JSON.stringify(offer.rawData) : null,
+              },
+            })
+
+            await prisma.normalizedOffer.create({
+              data: {
+                itemId: item.id,
+                searchResultId: searchResult.id,
+                connectorId: offer.connectorId,
+                isDemo: offer.isDemo,
+                supplierDomain: domain,
+                supplierName: offer.sourceName || domain,
+                productTitle: offer.title,
+                brand: item.brand ?? null,
+                model: item.model ?? null,
+                sku: item.sku ?? null,
+                unitPrice,
+                currency: offer.currency,
+                quantity,
+                totalPrice,
+                shippingCost,
+                shippingAvailable: shippingCost !== null || offer.sourceName.includes('MercadoLibre'),
+                estimatedDays: offer.isDemo ? 3 : null,
+                availability: (offer.availability as any) || 'IN_STOCK',
+                sourceUrl: offer.sourceUrl,
+                imageUrl: offer.imageUrl ?? offer.thumbnailUrl ?? null,
+                trustScore: trustResult.score,
+                trustCategory: trustResult.category,
+                trustBreakdown: trustResult.breakdown ? JSON.stringify(trustResult.breakdown) : null,
+                trustExplanation: trustResult.explanation,
+                buyingScore: buyingResult.score,
+                buyingBreakdown: buyingResult.components ? JSON.stringify(buyingResult.components) : null,
+                matchScore,
+                alerts: {
+                  create: alertResults.map((a) => ({
+                    type: a.type,
+                    severity: a.severity,
+                    message: a.message,
+                    detail: a.detail ?? null,
+                  })),
+                },
+              },
+            })
+          } catch (dbSaveErr) {
+            // Ignore DB save errors, memory store has it
+          }
+        }
 
         try {
-          const searchResult = await prisma.searchResult.create({
-            data: {
-              itemId: item.id,
-              connectorId: offer.connectorId,
-              isDemo: offer.isDemo,
-              sourceUrl: offer.sourceUrl,
-              sourceName: offer.sourceName,
-              rawTitle: offer.title,
-              rawPrice: offer.price,
-              rawCurrency: offer.currency,
-              rawAvailability: offer.availability,
-              rawShipping: offer.shippingCost,
-              rawImageUrl: offer.imageUrl ?? offer.thumbnailUrl ?? null,
-              rawRating: offer.rating,
-              rawReviewCount: offer.reviewCount,
-              rawSeller: offer.seller,
-              rawData: offer.rawData ? JSON.stringify(offer.rawData) : null,
-            },
+          await prisma.procurementItem.update({
+            where: { id: item.id },
+            data: { status: 'COMPLETED' },
           })
+        } catch {}
 
-          await prisma.normalizedOffer.create({
-            data: {
-              itemId: item.id,
-              searchResultId: searchResult.id,
-              connectorId: offer.connectorId,
-              isDemo: offer.isDemo,
-              supplierDomain: domain,
-              supplierName: offer.sourceName || domain,
-              productTitle: offer.title,
-              brand: item.brand ?? null,
-              model: item.model ?? null,
-              sku: item.sku ?? null,
-              unitPrice,
-              currency: offer.currency,
-              quantity,
-              totalPrice,
-              shippingCost,
-              shippingAvailable: shippingCost !== null || offer.sourceName.includes('MercadoLibre'),
-              estimatedDays: offer.isDemo ? 3 : null,
-              availability: (offer.availability as any) || 'IN_STOCK',
-              sourceUrl: offer.sourceUrl,
-              imageUrl: offer.imageUrl ?? offer.thumbnailUrl ?? null,
-              trustScore: trustResult.score,
-              trustCategory: trustResult.category,
-              trustBreakdown: trustResult.breakdown ? JSON.stringify(trustResult.breakdown) : null,
-              trustExplanation: trustResult.explanation,
-              buyingScore: buyingResult.score,
-              buyingBreakdown: buyingResult.components ? JSON.stringify(buyingResult.components) : null,
-              matchScore,
-              alerts: {
-                create: alertResults.map((a) => ({
-                  type: a.type,
-                  severity: a.severity,
-                  message: a.message,
-                  detail: a.detail ?? null,
-                })),
-              },
-            },
-          })
-        } catch (dbSaveErr) {
-          // Ignore DB save errors, memory store has it
+        return {
+          ...item,
+          status: 'COMPLETED',
+          offers: memoryItemOffers,
         }
-      }
-
-      updatedMemoryItems.push({
-        ...item,
-        status: 'COMPLETED',
-        offers: memoryItemOffers,
-      })
-
-      try {
-        await prisma.procurementItem.update({
-          where: { id: item.id },
-          data: { status: 'COMPLETED' },
-        })
-      } catch {}
-    }
+      }),
+    )
 
     try {
       await prisma.procurement.update({

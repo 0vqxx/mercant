@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { formatCurrency, formatDate } from '@/lib/utils'
-import { PlusCircle, ShoppingCart, ArrowUpRight } from 'lucide-react'
+import { PlusCircle, ShoppingCart, ArrowUpRight, Trash2 } from 'lucide-react'
 
 export default function ProcurementsListPage() {
   const [procurements, setProcurements] = useState<any[]>([])
@@ -34,6 +34,40 @@ export default function ProcurementsListPage() {
       })
       .finally(() => setLoading(false))
   }, [])
+
+  const handleDeleteProcurement = async (e: React.MouseEvent, id: string) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    if (!confirm('¿Estás seguro de eliminar esta cotización? Esta acción no se puede deshacer.')) {
+      return
+    }
+
+    try {
+      // 1. Evict from localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem(`mercant_procurement_${id}`)
+        try {
+          const list = JSON.parse(localStorage.getItem('mercant_procurements_list') || '[]')
+          const filtered = list.filter((p: any) => p.id !== id)
+          localStorage.setItem('mercant_procurements_list', JSON.stringify(filtered))
+        } catch {}
+        try {
+          const cache = JSON.parse(localStorage.getItem('mercant_procurements_cache') || '[]')
+          const filtered = cache.filter((p: any) => p.id !== id)
+          localStorage.setItem('mercant_procurements_cache', JSON.stringify(filtered))
+        } catch {}
+      }
+
+      // 2. Optimistically remove from state
+      setProcurements((prev) => prev.filter((p) => p.id !== id))
+
+      // 3. Inform backend
+      await fetch(`/api/procurements/${id}`, { method: 'DELETE' }).catch(() => {})
+    } catch (err) {
+      console.error('[ProcurementsListPage] Delete failed:', err)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -135,13 +169,23 @@ export default function ProcurementsListPage() {
                     </td>
 
                     <td className="py-3.5 px-5 text-right whitespace-nowrap">
-                      <Link
-                        href={`/procurements/${proc.id}`}
-                        className="inline-flex items-center gap-1 text-xs font-semibold text-[#635bff] dark:text-[#7a73ff] hover:underline"
-                      >
-                        <span>Ver resultados</span>
-                        <ArrowUpRight className="w-3.5 h-3.5" />
-                      </Link>
+                      <div className="inline-flex items-center justify-end gap-3">
+                        <Link
+                          href={`/procurements/${proc.id}`}
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-[#635bff] dark:text-[#7a73ff] hover:underline"
+                        >
+                          <span>Ver resultados</span>
+                          <ArrowUpRight className="w-3.5 h-3.5" />
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={(e) => handleDeleteProcurement(e, proc.id)}
+                          title="Eliminar cotización"
+                          className="text-[#8792a2] hover:text-red-500 transition-colors p-1 rounded hover:bg-red-50 dark:hover:bg-red-950/40"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

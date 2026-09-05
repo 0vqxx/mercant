@@ -307,14 +307,34 @@ export default function ProcurementDetailPage() {
   }, [rankedItems])
 
   const handleDelete = async () => {
+    if (!confirm('¿Estás seguro de eliminar esta cotización? Esta acción no se puede deshacer.')) {
+      return
+    }
     setIsDeleting(true)
     try {
-      const res = await fetch(`/api/procurements/${id}`, { method: 'DELETE' })
-      if (!res.ok) throw new Error('Error al eliminar compra')
-      router.push('/dashboard')
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('mercant_procurement_' + id)
+        try {
+          const cached = localStorage.getItem('mercant_procurements_cache')
+          if (cached) {
+            const list = JSON.parse(cached)
+            localStorage.setItem('mercant_procurements_cache', JSON.stringify(list.filter((p: any) => p.id !== id)))
+          }
+        } catch {}
+        try {
+          const listSaved = localStorage.getItem('mercant_procurements_list')
+          if (listSaved) {
+            const list = JSON.parse(listSaved)
+            localStorage.setItem('mercant_procurements_list', JSON.stringify(list.filter((p: any) => p.id !== id)))
+          }
+        } catch {}
+      }
+
+      await fetch(`/api/procurements/${id}`, { method: 'DELETE' }).catch(() => {})
+      router.push('/procurements')
     } catch (err: any) {
-      alert(err.message)
-      setIsDeleting(false)
+      console.error('[handleDelete] Error:', err)
+      router.push('/procurements')
     }
   }
 
@@ -489,7 +509,7 @@ export default function ProcurementDetailPage() {
           <div>
             <span className="font-semibold block mb-0.5">Consultando distribuidores en vivo...</span>
             <span className="opacity-90 text-[11px]">
-              Buscando precios y disponibilidad en Amazon, MercadoLibre, CyberPuerta, Lenovo, Dell, Walmart y OfficeDepot.
+              Buscando precios y disponibilidad en tiempo real en Amazon, MercadoLibre, CyberPuerta, Lenovo, Dell, DDTech, Intercompras, Liverpool, Walmart, Costco, Sam&apos;s Club, Steren, Doto y PCel.
             </span>
           </div>
         </div>

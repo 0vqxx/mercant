@@ -60,6 +60,7 @@ export class DirectWebScraperConnector extends BaseConnector {
           Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
           'Accept-Language': 'es-MX,es;q=0.9,en-US;q=0.8,en;q=0.7',
         },
+        signal: AbortSignal.timeout(3000),
       })
 
 

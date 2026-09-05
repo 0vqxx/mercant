@@ -71,6 +71,7 @@ export class MercadoLibreConnector extends BaseConnector {
           Accept: 'application/json',
           'User-Agent': 'ProcureAI/1.0 (+https://procureai.app)',
         },
+        signal: AbortSignal.timeout(3000),
       })
 
       if (!response.ok) {

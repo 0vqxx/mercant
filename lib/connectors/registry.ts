@@ -41,7 +41,14 @@ export class ConnectorRegistry {
     const available = this.getAvailable()
 
     const results = await Promise.allSettled(
-      available.map((connector) => connector.search(query)),
+      available.map((connector) =>
+        Promise.race([
+          connector.search(query),
+          new Promise<RawOffer[]>((_, reject) =>
+            setTimeout(() => reject(new Error(`Timeout connector ${connector.config.id}`)), 3500),
+          ),
+        ]),
+      ),
     )
 
     const offers: RawOffer[] = []
@@ -50,7 +57,7 @@ export class ConnectorRegistry {
         offers.push(...result.value)
       } else {
         const connectorId = available[index]?.config.id ?? 'unknown'
-        console.warn(`[ConnectorRegistry] Connector "${connectorId}" error:`, result.reason)
+        console.warn(`[ConnectorRegistry] Connector "${connectorId}" error or timeout:`, result.reason)
       }
     }
 
