@@ -453,18 +453,30 @@ function SettingsContent() {
                   <button
                     type="button"
                     onClick={() => {
+                      setPromoCode('MERCANT-LIFETIME-5')
+                      handleApplyPromo(undefined, 'MERCANT-LIFETIME-5')
+                    }}
+                    className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-[#059669] text-white hover:bg-[#047857] transition-all cursor-pointer shadow-xs flex items-center gap-1"
+                    title="Haz clic para canjear MERCANT-LIFETIME-5 (Pro de por vida, 5 usos)"
+                  >
+                    <span>MERCANT-LIFETIME-5</span>
+                    <span className="text-[10px] opacity-90">(De por vida ♾️)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
                       setPromoCode('MERCANT10')
                       handleApplyPromo(undefined, 'MERCANT10')
                     }}
                     className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-[#7f56d9] text-white hover:bg-[#6941c6] transition-all cursor-pointer shadow-xs flex items-center gap-1"
-                    title="Haz clic para canjear MERCANT10 ahora mismo"
+                    title="Haz clic para canjear MERCANT10 (30 días)"
                   >
                     <span>MERCANT10</span>
-                    <span className="text-[10px] opacity-80">(Clic para canjear)</span>
+                    <span className="text-[10px] opacity-80">(30 días)</span>
                   </button>
                 </div>
                 <span className="text-[11px] text-[#697386] dark:text-[#8792a2] block mt-0.5">
-                  10 cuentas máximo · Desbloquea 30 días de Pro Unlimited gratis
+                  Códigos exclusivos · <strong>MERCANT-LIFETIME-5</strong> desbloquea Pro Unlimited para siempre (5 usos máximos).
                 </span>
               </div>
             </div>

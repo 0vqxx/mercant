@@ -15,10 +15,13 @@ export async function POST(req: NextRequest) {
     const cleanCode = code.trim().toUpperCase()
 
     // Valid promo codes definitions
-    const validCodes: Record<string, { plan: string; durationDays: number; maxUses: number }> = {
-      MERCANT10: { plan: 'PRO', durationDays: 30, maxUses: 10 },
-      MERCANTPRO: { plan: 'PRO', durationDays: 30, maxUses: 50 },
-      PROMO2026: { plan: 'PRO', durationDays: 30, maxUses: 100 },
+    const validCodes: Record<string, { plan: string; durationDays: number; maxUses: number; isLifetime?: boolean }> = {
+      'MERCANT-LIFETIME-5': { plan: 'PRO', durationDays: 36500, maxUses: 5, isLifetime: true },
+      'MERCANTVIP5': { plan: 'PRO', durationDays: 36500, maxUses: 5, isLifetime: true },
+      'MERCANTLIFETIME': { plan: 'PRO', durationDays: 36500, maxUses: 5, isLifetime: true },
+      'MERCANT10': { plan: 'PRO', durationDays: 30, maxUses: 10 },
+      'MERCANTPRO': { plan: 'PRO', durationDays: 30, maxUses: 50 },
+      'PROMO2026': { plan: 'PRO', durationDays: 30, maxUses: 100 },
     }
 
     const promoConfig = validCodes[cleanCode]
@@ -102,11 +105,16 @@ export async function POST(req: NextRequest) {
       console.warn('[Promo DB Notice - Continuing with resilient activation]', dbErr)
     }
 
+    const successMsg = promoConfig.isLifetime
+      ? `¡Código ${cleanCode} canjeado con éxito! ¡Plan PRO Unlimited ACTIVADO DE POR VIDA (Lifetime)!`
+      : `¡Código ${cleanCode} canjeado con éxito! Plan ${promoConfig.plan} activado por ${promoConfig.durationDays} días.`
+
     return NextResponse.json({
       success: true,
-      message: `¡Código ${cleanCode} canjeado con éxito! Plan ${promoConfig.plan} activado por ${promoConfig.durationDays} días.`,
+      message: successMsg,
       plan: promoConfig.plan,
-      expiresAt: expiresAt.toISOString(),
+      isLifetime: !!promoConfig.isLifetime,
+      expiresAt: promoConfig.isLifetime ? null : expiresAt.toISOString(),
       promoCode: cleanCode,
     })
   } catch (err: any) {
