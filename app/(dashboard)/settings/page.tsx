@@ -975,6 +975,480 @@ function SettingsContent() {
       )}
 
       {/* ======================================================== */}
+      {/* 4. FACTURACIÓN (BILLING) TAB */}
+      {/* ======================================================== */}
+      {activeTab === 'billing' && (
+        <div className="space-y-4">
+          {/* Card 1: Top Usage Progress Alert */}
+          <div className="rounded-2xl border border-[#e3e8ee] dark:border-[#1e2430] bg-white dark:bg-[#0c1018] p-5 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              {/* Circular SVG Ring Progress */}
+              <div className="relative w-12 h-12 flex-shrink-0 flex items-center justify-center">
+                <svg className="w-12 h-12 transform -rotate-90" viewBox="0 0 36 36">
+                  <path
+                    className="text-[#e3e8ee] dark:text-[#222429]"
+                    strokeWidth="3.2"
+                    stroke="currentColor"
+                    fill="none"
+                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                  />
+                  <path
+                    className="text-[#635bff] dark:text-[#7f56d9]"
+                    strokeDasharray={`${percentUsed}, 100`}
+                    strokeLinecap="round"
+                    strokeWidth="3.2"
+                    stroke="currentColor"
+                    fill="none"
+                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                  />
+                </svg>
+                <span className="absolute text-[10px] font-bold text-[#635bff] dark:text-[#9e77ed]">{percentUsed}%</span>
+              </div>
+
+              <div>
+                <h3 className="text-sm font-semibold text-[#0a2540] dark:text-white">
+                  Has usado {quotesUsed} de {quotesTotal} cotizaciones disponibles
+                </h3>
+                <p className="text-xs text-[#697386] dark:text-[#8792a2] mt-0.5 max-w-xl leading-relaxed">
+                  {isPlanActive
+                    ? `Plan PRO Ilimitado activo${billingData?.planExpiresAt ? ` (Vigente hasta ${new Date(billingData.planExpiresAt).toLocaleDateString()})` : ' (Vigencia de por vida ♾️)'}. Búsquedas web y cotizaciones en tiempo real.`
+                    : 'Mejora al plan Pro para desbloquear cotizaciones ilimitadas, rastreo web en distribuidores y soporte 24/7.'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 2 & 3: 2-Column Row (Premium Plan + Payment Method) */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Column 1 & 2: Premium Plan Card */}
+            <div className="md:col-span-2 rounded-2xl border border-[#e3e8ee] dark:border-[#1e2430] bg-white dark:bg-[#0c1018] p-5 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between pb-3">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-semibold text-[#0a2540] dark:text-white">
+                      {isPlanActive ? 'Plan Pro Unlimited' : 'Plan Starter (Free)'}
+                    </h3>
+                    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium ${isPlanActive ? 'bg-[#052e16] text-[#4ade80] border border-[#14532d]' : 'bg-[#f8fafc] dark:bg-[#121826] text-[#697386] dark:text-[#8792a2] border border-[#e3e8ee] dark:border-[#1e2430]'}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${isPlanActive ? 'bg-[#4ade80] animate-pulse' : 'bg-[#94969c]'}`} />
+                      {isPlanActive ? 'Activo' : 'Base'}
+                    </span>
+                  </div>
+
+                  {!isPlanActive ? (
+                    <button
+                      type="button"
+                      onClick={() => handleCheckout('PRO')}
+                      disabled={checkoutLoading === 'PRO'}
+                      className="px-3 py-1.5 rounded-lg text-xs font-medium bg-[#635bff] hover:bg-[#5346e0] dark:bg-[#7f56d9] dark:hover:bg-[#6941c6] text-white transition-colors cursor-pointer"
+                    >
+                      {checkoutLoading === 'PRO' ? '...' : 'Upgrade to Pro'}
+                    </button>
+                  ) : (
+                    <span className="text-xs font-medium text-[#4ade80] bg-[#052e16] px-2.5 py-1 rounded-lg border border-[#14532d]">
+                      Suscripción Activa
+                    </span>
+                  )}
+                </div>
+
+                <p className="text-xs text-[#697386] dark:text-[#8792a2]">
+                  {isPlanActive
+                    ? 'Acceso total a cotizador IA multi-canal, scraping en tiempo real y optimización de presupuesto.'
+                    : 'Plan gratuito inicial para cotizar y comparar proveedores en México.'}
+                </p>
+              </div>
+
+              <div className="mt-8 pt-4 border-t border-[#e3e8ee] dark:border-[#1e2430] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-baseline gap-1">
+                  <span className="text-3xl font-bold tracking-tight text-[#0a2540] dark:text-white">{isPlanActive ? '$499' : '$0'}</span>
+                  <span className="text-xs text-[#697386] dark:text-[#8792a2] font-medium">/month (MXN)</span>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-[#697386] dark:text-[#8792a2] font-medium">
+                    {quotesUsed} de {quotesTotal} cotizaciones
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Column 3: Payment Method Card */}
+            <div className="rounded-2xl border border-[#e3e8ee] dark:border-[#1e2430] bg-white dark:bg-[#0c1018] p-5 flex flex-col justify-between">
+              <div>
+                <h3 className="text-sm font-semibold text-[#0a2540] dark:text-white">
+                  {t('paymentMethod')}
+                </h3>
+                <p className="text-xs text-[#697386] dark:text-[#8792a2] mt-0.5">
+                  {t('paymentMethodDesc')}
+                </p>
+              </div>
+
+              <div className="mt-4 p-3 rounded-xl border border-[#e3e8ee] dark:border-[#1e2430] bg-[#f8fafc] dark:bg-[#121826] flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-[#635bff] dark:bg-[#6941c6] flex items-center justify-center text-white shrink-0">
+                  <CreditCard className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-xs font-semibold text-[#0a2540] dark:text-white block truncate">
+                    Stripe Connect
+                  </span>
+                  <span className="text-[11px] text-[#697386] dark:text-[#8792a2] truncate block">
+                    {userEmail}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Minimalist Promo Code Inset with Clickable Code */}
+          <div className="rounded-2xl border border-[#e3e8ee] dark:border-[#1e2430] bg-white dark:bg-[#0c1018] p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-[#635bff]/15 dark:bg-[#7f56d9]/20 flex items-center justify-center text-[#635bff] dark:text-[#9e77ed] shrink-0">
+                <Sparkles className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-semibold text-[#0a2540] dark:text-white">
+                    Código de acceso:
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPromoCode('MERCANT-LIFETIME-5')
+                      handleApplyPromo(undefined, 'MERCANT-LIFETIME-5')
+                    }}
+                    className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-[#059669] text-white hover:bg-[#047857] transition-all cursor-pointer shadow-xs flex items-center gap-1"
+                    title="Haz clic para canjear MERCANT-LIFETIME-5 (Pro de por vida, 5 usos)"
+                  >
+                    <span>MERCANT-LIFETIME-5</span>
+                    <span className="text-[10px] opacity-90">(De por vida ♾️)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPromoCode('MERCANT10')
+                      handleApplyPromo(undefined, 'MERCANT10')
+                    }}
+                    className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-[#635bff] dark:bg-[#7f56d9] text-white hover:opacity-90 transition-all cursor-pointer shadow-xs flex items-center gap-1"
+                    title="Haz clic para canjear MERCANT10 (30 días)"
+                  >
+                    <span>MERCANT10</span>
+                    <span className="text-[10px] opacity-80">(30 días)</span>
+                  </button>
+                </div>
+                <span className="text-[11px] text-[#697386] dark:text-[#8792a2] block mt-0.5">
+                  Códigos exclusivos · <strong>MERCANT-LIFETIME-5</strong> desbloquea Pro Unlimited para siempre (5 usos máximos).
+                </span>
+              </div>
+            </div>
+
+            <form onSubmit={handleApplyPromo} className="flex gap-2 w-full sm:w-auto shrink-0">
+              <input
+                type="text"
+                value={promoCode}
+                onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                placeholder="MERCANT10"
+                className="font-mono uppercase text-xs font-semibold bg-[#f8fafc] dark:bg-[#121826] border border-[#e3e8ee] dark:border-[#333741] text-[#0a2540] dark:text-white placeholder-[#667085] rounded-lg px-3 py-2 w-full sm:w-40 focus:outline-none focus:border-[#635bff]"
+              />
+              <button
+                type="submit"
+                disabled={promoLoading}
+                className="px-4 py-2 rounded-lg text-xs font-semibold bg-[#635bff] dark:bg-[#7f56d9] hover:opacity-90 active:scale-95 text-white transition-all cursor-pointer shadow-sm shrink-0 flex items-center justify-center min-w-[80px]"
+              >
+                {promoLoading ? (
+                  <span className="inline-block w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  'Canjear'
+                )}
+              </button>
+            </form>
+          </div>
+
+          {promoSuccess && (
+            <div className="p-3 rounded-xl bg-[#052e16] border border-[#14532d] text-xs text-[#4ade80] flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              <span>{promoSuccess}</span>
+            </div>
+          )}
+
+          {promoError && (
+            <div className="p-3 rounded-xl bg-[#2a0f12] border border-[#521c22] text-xs text-[#f87171] flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{promoError}</span>
+            </div>
+          )}
+
+          {/* Card 5: Billing History Table */}
+          <div className="rounded-2xl border border-[#e3e8ee] dark:border-[#1e2430] bg-white dark:bg-[#0c1018] overflow-hidden">
+            <div className="p-5 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#e3e8ee] dark:border-[#1e2430]">
+              <div>
+                <h3 className="text-sm font-semibold text-[#0a2540] dark:text-white">
+                  {t('billingHistory')}
+                </h3>
+              </div>
+
+              <div className="relative w-full sm:w-64">
+                <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-[#697386] dark:text-[#8792a2]" />
+                <input
+                  type="text"
+                  value={historySearch}
+                  onChange={(e) => setHistorySearch(e.target.value)}
+                  placeholder="Search invoices..."
+                  className="pl-8 text-xs bg-[#f8fafc] dark:bg-[#121826] border border-[#e3e8ee] dark:border-[#1e2430] text-[#0a2540] dark:text-white placeholder-[#667085] rounded-lg h-8 w-full focus:outline-none focus:border-[#635bff]"
+                />
+              </div>
+            </div>
+
+            {/* Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs text-left">
+                <thead className="bg-[#f8fafc] dark:bg-[#0c1018] text-[#697386] dark:text-[#8792a2] border-b border-[#e3e8ee] dark:border-[#1e2430]">
+                  <tr>
+                    <th className="py-3 px-4 w-10">
+                      <input
+                        type="checkbox"
+                        checked={selectedInvoices.length === filteredInvoices.length && filteredInvoices.length > 0}
+                        onChange={toggleAllInvoices}
+                        className="rounded border-[#333741] bg-[#f8fafc] dark:bg-[#121826] text-[#635bff] cursor-pointer"
+                      />
+                    </th>
+                    <th className="py-3 px-4 font-medium text-[#697386] dark:text-[#8792a2]">{t('invoice')}</th>
+                    <th className="py-3 px-4 font-medium text-[#697386] dark:text-[#8792a2] flex items-center gap-1">
+                      <span>Billing date</span>
+                      <ArrowUpDown className="w-3 h-3 text-[#697386] dark:text-[#8792a2]" />
+                    </th>
+                    <th className="py-3 px-4 font-medium text-[#697386] dark:text-[#8792a2]">Amount</th>
+                    <th className="py-3 px-4 font-medium text-[#697386] dark:text-[#8792a2]">Plan</th>
+                    <th className="py-3 px-4 font-medium text-[#697386] dark:text-[#8792a2]">Status</th>
+                    <th className="py-3 px-4 font-medium text-[#697386] dark:text-[#8792a2] text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#e3e8ee] dark:divide-[#1e2025]">
+                  {filteredInvoices.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-8 text-center text-xs text-[#697386] dark:text-[#8792a2]">
+                        No hay facturas registradas todavía para esta cuenta.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredInvoices.map((inv) => {
+                      const isChecked = selectedInvoices.includes(inv.id)
+                      return (
+                        <tr key={inv.id} className="hover:bg-[#f8fafc] dark:hover:bg-[#121826]/50 transition-colors">
+                          <td className="py-3.5 px-4">
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => toggleInvoice(inv.id)}
+                              className="rounded border-[#333741] bg-[#f8fafc] dark:bg-[#121826] text-[#635bff] cursor-pointer"
+                            />
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <span className="font-mono font-medium text-[#0a2540] dark:text-white block">
+                              {inv.folio}
+                            </span>
+                            <span className="text-[10px] text-[#697386] dark:text-[#8792a2] block truncate max-w-[140px]">
+                              {inv.paymentMethod}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 text-[#697386] dark:text-[#8792a2]">
+                            {inv.date}
+                          </td>
+                          <td className="py-3.5 px-4 font-semibold text-[#0a2540] dark:text-white">
+                            <div>{inv.amount}</div>
+                            {inv.discount && (
+                              <span className="text-[10px] text-[#4ade80] block">100% OFF Cupón</span>
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4 text-[#697386] dark:text-[#8792a2]">
+                            {inv.plan}
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#052e16] text-[#4ade80] border border-[#14532d]">
+                              <Check className="w-2.5 h-2.5" />
+                              {inv.status}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 text-right">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedInvoiceModal(inv)}
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#635bff]/10 dark:bg-[#7f56d9]/15 hover:bg-[#635bff]/20 dark:hover:bg-[#7f56d9]/25 text-[#635bff] dark:text-[#9e77ed] font-medium cursor-pointer transition-all border border-[#635bff]/20 text-xs shadow-xs"
+                            >
+                              <FileText className="w-3.5 h-3.5" />
+                              <span>Ver PDF</span>
+                            </button>
+                          </td>
+                        </tr>
+                      )
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Modal / PDF Receipt Viewer */}
+          {selectedInvoiceModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150">
+              <div className="bg-white dark:bg-[#0c1018] border border-[#e3e8ee] dark:border-[#1e2430] rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl text-[#0a2540] dark:text-white">
+                {/* Modal Header */}
+                <div className="p-5 border-b border-[#e3e8ee] dark:border-[#1e2430] flex items-center justify-between bg-[#f8fafc] dark:bg-[#121826]">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-[#635bff]/15 dark:bg-[#7f56d9]/20 flex items-center justify-center text-[#635bff] dark:text-[#9e77ed]">
+                      <FileText className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h2 className="text-sm font-bold text-[#0a2540] dark:text-white flex items-center gap-2">
+                        <span>Recibo Fiscal / Factura Oficial</span>
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#052e16] text-[#4ade80] border border-[#14532d]">
+                          PAGADO
+                        </span>
+                      </h2>
+                      <span className="text-xs text-[#697386] dark:text-[#8792a2] font-mono">
+                        Folio: {selectedInvoiceModal.folio} · UUID: {selectedInvoiceModal.uuid}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedInvoiceModal(null)}
+                    className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-[#222429] hover:bg-gray-200 dark:hover:bg-[#2c2e33] text-[#697386] dark:text-[#8792a2] hover:text-[#0a2540] dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Receipt Body (Printable Area) */}
+                <div id="invoice-printable-content" className="p-6 space-y-6 text-xs bg-white dark:bg-[#0c1018]">
+                  {/* Top Company & Client Grid */}
+                  <div className="grid grid-cols-2 gap-6 pb-6 border-b border-[#e3e8ee] dark:border-[#1e2430]">
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-bold text-[#635bff] dark:text-[#7f56d9] uppercase tracking-wider block">
+                        Emisor
+                      </span>
+                      <h4 className="font-bold text-sm text-[#0a2540] dark:text-white">Mercant AI S.A.P.I. de C.V.</h4>
+                      <p className="text-[#697386] dark:text-[#8792a2] text-[11px] leading-relaxed">
+                        RFC: MAI240315-9K2<br />
+                        Régimen Fiscal: 601 General de Ley Personas Morales<br />
+                        Av. Paseo de la Reforma 483, Cuauhtémoc, CDMX, C.P. 06500<br />
+                        soporte@mercant.org · www.mercant.org
+                      </p>
+                    </div>
+
+                    <div className="space-y-1 text-right">
+                      <span className="text-[10px] font-bold text-[#635bff] dark:text-[#7f56d9] uppercase tracking-wider block">
+                        Cliente / Receptor
+                      </span>
+                      <h4 className="font-bold text-sm text-[#0a2540] dark:text-white">{userEmail}</h4>
+                      <p className="text-[#697386] dark:text-[#8792a2] text-[11px] leading-relaxed">
+                        RFC: {accountForm.rfc || 'XAXX010101000'}<br />
+                        Uso CFDI: {accountForm.cfdiUsage.split(' ')[0]}<br />
+                        Método de Pago: {selectedInvoiceModal.paymentMethod}<br />
+                        Fecha de Emisión: {selectedInvoiceModal.date}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Line Item Table */}
+                  <div className="rounded-xl border border-[#e3e8ee] dark:border-[#1e2430] overflow-hidden">
+                    <table className="w-full text-left">
+                      <thead className="bg-[#f8fafc] dark:bg-[#121826] text-[#697386] dark:text-[#8792a2] text-[11px]">
+                        <tr>
+                          <th className="p-3">Descripción</th>
+                          <th className="p-3 text-center">Cant.</th>
+                          <th className="p-3 text-right">P. Unitario</th>
+                          <th className="p-3 text-right">Importe</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#e3e8ee] dark:divide-[#1e2025]">
+                        <tr>
+                          <td className="p-3">
+                            <span className="font-semibold text-[#0a2540] dark:text-white block">{selectedInvoiceModal.plan}</span>
+                            <span className="text-[11px] text-[#697386] dark:text-[#8792a2]">
+                              {selectedInvoiceModal.isPromo
+                                ? 'Canje de Cupón Promocional (Descuento 100% en cotizaciones)'
+                                : 'Suscripción mensual recurrente · Consultas ilimitadas y rastreo web'}
+                            </span>
+                          </td>
+                          <td className="p-3 text-center text-[#0a2540] dark:text-white font-medium">1</td>
+                          <td className="p-3 text-right text-[#697386] dark:text-[#8792a2] font-mono">{selectedInvoiceModal.subtotal}</td>
+                          <td className="p-3 text-right text-[#0a2540] dark:text-white font-semibold font-mono">{selectedInvoiceModal.subtotal}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Totals Summary */}
+                  <div className="flex justify-end">
+                    <div className="w-64 space-y-2 bg-[#f8fafc] dark:bg-[#121826] p-4 rounded-xl border border-[#e3e8ee] dark:border-[#1e2430]">
+                      <div className="flex justify-between text-[#697386] dark:text-[#8792a2]">
+                        <span>Subtotal:</span>
+                        <span className="font-mono">{selectedInvoiceModal.subtotal}</span>
+                      </div>
+                      {selectedInvoiceModal.discount && (
+                        <div className="flex justify-between text-[#4ade80]">
+                          <span>Descuento:</span>
+                          <span className="font-mono">{selectedInvoiceModal.discount}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between text-[#697386] dark:text-[#8792a2]">
+                        <span>IVA Trasladado (16%):</span>
+                        <span className="font-mono">{selectedInvoiceModal.iva}</span>
+                      </div>
+                      <div className="flex justify-between text-sm font-bold text-[#0a2540] dark:text-white pt-2 border-t border-[#e3e8ee] dark:border-[#1e2430]">
+                        <span>Total Pagado:</span>
+                        <span className="text-[#635bff] dark:text-[#9e77ed] font-mono">{selectedInvoiceModal.amount}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* SAT Footer & Timbre Simulation */}
+                  <div className="p-3 rounded-xl bg-[#f8fafc] dark:bg-[#121826]/50 border border-[#e3e8ee] dark:border-[#1e2430] space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold text-[#697386] dark:text-[#8792a2] uppercase tracking-wider">
+                        Timbre Fiscal Digital (SAT CFDI 4.0)
+                      </span>
+                      <span className="text-[10px] text-[#4ade80] font-semibold flex items-center gap-1">
+                        <Check className="w-3 h-3" /> Verificado por Proveedor Autorizado de Certificación
+                      </span>
+                    </div>
+                    <p className="font-mono text-[9px] text-[#697386] dark:text-[#8792a2] break-all leading-tight">
+                      ||1.1|{selectedInvoiceModal.uuid}|2026-03-06T12:00:00|MAI240315-9K2|7f8a9e10bcde89f1a2b3c4d5e6f7a8b9c0d1e2f3|00001000000504465028||
+                    </p>
+                  </div>
+                </div>
+
+                {/* Modal Footer Actions */}
+                <div className="p-4 border-t border-[#e3e8ee] dark:border-[#1e2430] bg-[#f8fafc] dark:bg-[#121826] flex items-center justify-between gap-3">
+                  <span className="text-[11px] text-[#697386] dark:text-[#8792a2]">
+                    Documento con validez fiscal para deducción en México (MXN).
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedInvoiceModal(null)}
+                      className="px-3.5 py-1.5 rounded-lg bg-gray-200 dark:bg-[#222429] hover:bg-gray-300 dark:hover:bg-[#2c2e33] text-[#0a2540] dark:text-white text-xs font-medium transition-colors cursor-pointer"
+                    >
+                      Cerrar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        window.print()
+                      }}
+                      className="px-4 py-1.5 rounded-lg bg-[#635bff] dark:bg-[#7f56d9] hover:opacity-90 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+                    >
+                      <Printer className="w-3.5 h-3.5" />
+                      <span>Imprimir / Descargar PDF</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ======================================================== */}
       {/* 5. NOTIFICACIONES (NOTIFICATIONS) TAB */}
       {/* ======================================================== */}
       {activeTab === 'notifications' && (

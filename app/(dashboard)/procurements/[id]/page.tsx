@@ -24,6 +24,7 @@ import {
   PiggyBank,
   X,
   BarChart3,
+  ShoppingCart,
 } from 'lucide-react'
 import { ProcurementCostChart } from '@/components/procurement/ProcurementCostChart'
 
@@ -406,13 +407,26 @@ export default function ProcurementDetailPage() {
         <div className="flex flex-wrap items-center gap-2">
           {totalOffersCount > 0 && (
             <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setShowLinksSummaryModal(true)}
+              className="gap-1.5 bg-[#059669] hover:bg-[#047857] text-white border-none shadow-sm"
+              title="Comprar todos los artículos o añadirlos directamente al carrito del proveedor"
+            >
+              <ShoppingCart className="w-3.5 h-3.5" />
+              <span>Comprar Cesta (1 Clic)</span>
+            </Button>
+          )}
+
+          {totalOffersCount > 0 && (
+            <Button
               variant="secondary"
               size="sm"
               onClick={() => setShowLinksSummaryModal(true)}
               className="gap-1.5"
             >
               <ExternalLink className="w-3.5 h-3.5 text-[#635bff]" />
-              <span>Mejores enlaces</span>
+              <span>Ver enlaces</span>
             </Button>
           )}
 
@@ -432,13 +446,13 @@ export default function ProcurementDetailPage() {
 
           {totalOffersCount > 0 && (
             <Button
-              variant="primary"
+              variant="secondary"
               size="sm"
               onClick={() => handleOptimize(false)}
               isLoading={optimizing}
               className="gap-1.5"
             >
-              <Sparkles className="w-3.5 h-3.5" />
+              <Sparkles className="w-3.5 h-3.5 text-[#635bff]" />
               <span>Optimizar cesta</span>
             </Button>
           )}
@@ -679,56 +693,107 @@ export default function ProcurementDetailPage() {
       </div>
 
 
-      {/* All Best Links Summary Modal */}
+      {/* All Best Links & 1-Click Purchase Center Modal */}
       {showLinksSummaryModal && (
-        <div className="fixed inset-0 z-50 bg-[#0a2540]/40 backdrop-blur-[2px] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#151a24] rounded-lg border border-[#e3e8ee] dark:border-[#232a38] p-5 max-w-2xl w-full max-h-[85vh] flex flex-col space-y-4 shadow-[0px_20px_40px_rgba(0,0,0,0.15)] animate-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between pb-3 border-b border-[#f4f6f8] dark:border-[#1e2430]">
-              <div>
-                <h3 className="font-semibold text-sm text-[#0a2540] dark:text-white">
-                  Resumen de mejores enlaces
-                </h3>
-                <p className="text-xs text-[#697386] dark:text-[#8792a2]">
-                  Acceso directo a las ofertas más convenientes calculadas para cada artículo.
-                </p>
+        <div className="fixed inset-0 z-50 bg-[#0a2540]/60 backdrop-blur-[2px] flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-white dark:bg-[#151a24] rounded-2xl border border-[#e3e8ee] dark:border-[#232a38] p-6 max-w-3xl w-full max-h-[90vh] flex flex-col space-y-5 shadow-[0px_20px_50px_rgba(0,0,0,0.25)]">
+            <div className="flex items-center justify-between pb-3 border-b border-[#e3e8ee] dark:border-[#232a38]">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                  <ShoppingCart className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-[#0a2540] dark:text-white flex items-center gap-2">
+                    <span>Centro de Compra Directa & Carrito</span>
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                      Multi-Tienda
+                    </span>
+                  </h3>
+                  <p className="text-xs text-[#697386] dark:text-[#8792a2]">
+                    Abre los enlaces de los proveedores calculados para comprar o añadir a tu carrito en 1 clic.
+                  </p>
+                </div>
               </div>
               <button
+                type="button"
                 onClick={() => setShowLinksSummaryModal(false)}
-                className="p-1 rounded text-[#697386] hover:text-[#0a2540] dark:hover:text-white hover:bg-[#f4f6f8] dark:hover:bg-[#1e2430] transition-colors cursor-pointer"
+                className="p-1.5 rounded-lg text-[#697386] hover:text-[#0a2540] dark:hover:text-white hover:bg-[#f4f6f8] dark:hover:bg-[#1e2430] transition-colors cursor-pointer"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="overflow-y-auto divide-y divide-[#f4f6f8] dark:divide-[#1e2430] pr-1 text-xs">
+            {/* Quick Action Banner */}
+            <div className="p-4 rounded-xl bg-gradient-to-r from-[#635bff]/10 via-emerald-500/10 to-transparent border border-[#635bff]/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div>
+                <span className="text-xs font-bold text-[#0a2540] dark:text-white block">
+                  Compra de Cesta Consolidada ({bestLinksSummary.length} productos)
+                </span>
+                <span className="text-[11px] text-[#697386] dark:text-[#8792a2]">
+                  Costo total optimizado: <strong className="text-emerald-600 dark:text-emerald-400 font-bold">{formatCurrency(totalEstimatedSpend, procurement.currency)}</strong>
+                  {totalSavings > 0 && ` · Ahorro estimado: ${formatCurrency(totalSavings, procurement.currency)}`}
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const urls = bestLinksSummary
+                    .map((item: any) => item.bestOffer?.sourceUrl)
+                    .filter((url: string | undefined): url is string => Boolean(url))
+                  
+                  if (urls.length === 0) {
+                    alert('No hay enlaces disponibles para abrir')
+                    return
+                  }
+
+                  urls.forEach((url: string) => {
+                    window.open(url, '_blank', 'noopener,noreferrer')
+                  })
+                }}
+                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-2 shadow-sm transition-all cursor-pointer shrink-0 active:scale-95"
+              >
+                <ShoppingCart className="w-4 h-4" />
+                <span>Abrir todos los carritos en pestañas</span>
+              </button>
+            </div>
+
+            {/* Products List */}
+            <div className="overflow-y-auto divide-y divide-[#e3e8ee] dark:divide-[#232a38] pr-1 text-xs max-h-[50vh]">
               {bestLinksSummary.map((item: any, idx: number) => {
                 const offer = item.bestOffer
                 return (
-                  <div key={item.itemId || idx} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="space-y-0.5">
+                  <div key={item.itemId || idx} className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-[#f8fafc] dark:hover:bg-[#1a2130]/40 px-2 rounded-xl transition-colors">
+                    <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className="w-4 h-4 rounded bg-[#f4f6f8] dark:bg-[#1e2430] flex items-center justify-center text-[10px] font-semibold text-[#697386] dark:text-[#8792a2] tabular-nums">
+                        <span className="w-5 h-5 rounded-md bg-[#635bff]/10 dark:bg-[#7a73ff]/20 flex items-center justify-center text-[10px] font-bold text-[#635bff] dark:text-[#7a73ff] tabular-nums">
                           {idx + 1}
                         </span>
-                        <span className="font-semibold text-[#0a2540] dark:text-white text-xs">
+                        <span className="font-bold text-[#0a2540] dark:text-white text-xs">
                           {item.itemName}
                         </span>
-                        <span className="text-[#697386] text-[11px]">({item.quantity} u)</span>
+                        <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-gray-100 dark:bg-[#1e2430] text-[#697386] dark:text-[#8792a2]">
+                          Cant: {item.quantity}
+                        </span>
                       </div>
 
                       {offer ? (
-                        <div className="text-[#697386] dark:text-[#8792a2] pl-6 text-[11px] flex items-center gap-2 tabular-nums">
+                        <div className="text-[#697386] dark:text-[#8792a2] pl-7 text-[11px] flex items-center gap-3 tabular-nums flex-wrap">
                           <span>
-                            Tienda: <strong className="text-[#0a2540] dark:text-white font-medium">{offer.supplierName}</strong>
+                            Tienda: <strong className="text-[#0a2540] dark:text-white font-semibold">{offer.supplierName}</strong>
                           </span>
                           <span>·</span>
                           <span>
-                            Total: <strong className="text-[#0a2540] dark:text-white font-semibold">{formatCurrency(offer.totalPrice, offer.currency || procurement.currency)}</strong>
+                            Unitario: <strong className="text-[#0a2540] dark:text-white font-mono">{formatCurrency(offer.unitPrice, offer.currency || procurement.currency)}</strong>
+                          </span>
+                          <span>·</span>
+                          <span>
+                            Total: <strong className="text-emerald-600 dark:text-emerald-400 font-bold font-mono">{formatCurrency(offer.totalPrice, offer.currency || procurement.currency)}</strong>
                           </span>
                         </div>
                       ) : (
-                        <div className="text-[#a3acb9] pl-6 text-[11px]">
-                          Sin enlaces disponibles
+                        <div className="text-[#a3acb9] pl-7 text-[11px]">
+                          Sin enlaces de compra disponibles
                         </div>
                       )}
                     </div>
@@ -738,10 +803,11 @@ export default function ProcurementDetailPage() {
                         href={offer.sourceUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-md text-xs font-semibold bg-[#635bff] hover:bg-[#5349e0] text-white shadow-xs transition-all shrink-0 self-start sm:self-center"
+                        className="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-[#635bff] dark:bg-[#7a73ff] hover:opacity-90 text-white shadow-xs transition-all shrink-0 self-start sm:self-center"
                       >
-                        <span>Abrir {offer.supplierName}</span>
-                        <ExternalLink className="w-3 h-3" />
+                        <ShoppingCart className="w-3.5 h-3.5" />
+                        <span>Comprar en {offer.supplierName}</span>
+                        <ExternalLink className="w-3 h-3 opacity-75" />
                       </a>
                     )}
                   </div>
@@ -749,7 +815,7 @@ export default function ProcurementDetailPage() {
               })}
             </div>
 
-            <div className="flex items-center justify-between pt-3 border-t border-[#f4f6f8] dark:border-[#1e2430] text-xs text-[#697386]">
+            <div className="flex items-center justify-between pt-3 border-t border-[#e3e8ee] dark:border-[#232a38] text-xs text-[#697386] dark:text-[#8792a2]">
               <span>Total cotizado: <strong className="text-[#0a2540] dark:text-white font-bold tabular-nums">{formatCurrency(totalEstimatedSpend, procurement.currency)}</strong></span>
               <Button
                 variant="outline"

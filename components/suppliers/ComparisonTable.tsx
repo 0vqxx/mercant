@@ -5,7 +5,7 @@ import { TrustBadge } from '@/components/procurement/TrustBadge'
 import { BuyingScoreBadge } from '@/components/procurement/BuyingScoreBadge'
 import { AlertCard } from '@/components/procurement/AlertCard'
 import { formatCurrency } from '@/lib/utils'
-import { ExternalLink, CheckCircle2, XCircle, Clock } from 'lucide-react'
+import { ExternalLink, CheckCircle2, XCircle, Clock, ShoppingCart } from 'lucide-react'
 
 interface OfferWithAlerts {
   id: string
@@ -152,10 +152,11 @@ export function ComparisonTable({
                       href={offer.sourceUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold text-[#635bff] dark:text-[#7a73ff] hover:bg-[#635bff]/10 transition-colors"
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold bg-[#635bff] dark:bg-[#7a73ff] hover:opacity-90 text-white shadow-xs transition-all cursor-pointer"
+                      title={`Comprar en ${offer.supplierName}`}
                     >
-                      <span>Abrir</span>
-                      <ExternalLink className="w-3 h-3" />
+                      <ShoppingCart className="w-3 h-3" />
+                      <span>Comprar</span>
                     </a>
                   </td>
                 </tr>
