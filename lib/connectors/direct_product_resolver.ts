@@ -6,6 +6,8 @@
  * Always tags referral as `ref=mercant`.
  */
 
+import { extractCleanProduct } from './cleanQuery'
+
 export interface ProductReference {
   name: string
   brand?: string
@@ -182,18 +184,18 @@ function cleanDomain(domain: string): string {
 }
 
 /**
- * Builds a direct verified product URL with ref=mercant
+ * Returns canonical verified direct product URL from curated enterprise registry if available
  */
-export function resolveDirectProductUrl(
+export function getCanonicalDirectUrl(
   domain: string,
   queryText: string,
   brand?: string,
   model?: string,
-): string {
+): string | null {
   const normDomain = cleanDomain(domain)
-  const productKey = identifyProductKey({ name: queryText, brand, model })
+  const { cleanQuery, brand: cleanBrand, model: cleanModel } = extractCleanProduct(queryText, brand, model)
+  const productKey = identifyProductKey({ name: queryText, brand: cleanBrand, model: cleanModel })
 
-  // 1. Check exact canonical direct product URL in curated database
   if (productKey && CANONICAL_DIRECT_PRODUCTS[productKey]) {
     const storeMap = CANONICAL_DIRECT_PRODUCTS[productKey]
     for (const [storeDomain, directUrl] of Object.entries(storeMap)) {
@@ -203,67 +205,109 @@ export function resolveDirectProductUrl(
     }
   }
 
-  // 2. Focused query for store-specific direct product navigation
-  // Strip noisy tender keywords ("Computadora de escritorio", "Licencia de sistema operativo")
-  const brandClean = brand ? brand.trim() : ''
-  const modelClean = model ? model.trim() : ''
-  const focusedTerm = [brandClean, modelClean].filter(Boolean).join(' ') || queryText.replace(/(computadora de escritorio|licencia de sistema operativo|suite ofimática)/gi, '').trim()
-  const encodedTerm = encodeURIComponent(focusedTerm.trim() || queryText.trim())
+  return null
+}
 
-  // Amazon direct focused product listing
+/**
+ * Builds a direct verified product URL with ref=mercant for ANY product
+ */
+export function resolveDirectProductUrl(
+  domain: string,
+  queryText: string,
+  brand?: string,
+  model?: string,
+  routeViaRedirect = true,
+): string {
+  const normDomain = cleanDomain(domain)
+  const { cleanQuery, brand: cleanBrand, model: cleanModel } = extractCleanProduct(queryText, brand, model)
+
+  // 1. Check exact canonical direct product URL in curated database
+  const canonical = getCanonicalDirectUrl(domain, queryText, brand, model)
+  if (canonical) {
+    return canonical
+  }
+
+  // 2. High-precision store-specific direct product navigation
+  // For Amazon & MercadoLibre, route via our live direct product resolver
+  if (routeViaRedirect && (normDomain.includes('amazon') || normDomain.includes('mercadolibre'))) {
+    const params = new URLSearchParams({
+      store: normDomain,
+      name: cleanQuery,
+    })
+    if (cleanBrand) params.set('brand', cleanBrand)
+    if (cleanModel) params.set('model', cleanModel)
+    return `/api/redirect?${params.toString()}`
+  }
+
+  const encodedQuery = encodeURIComponent(cleanQuery)
+  const encodedModel = encodeURIComponent(cleanModel || cleanQuery)
+  const encodedBrand = encodeURIComponent(cleanBrand)
+
+  // Amazon direct focused product listing (filtered strictly to brand and exact popularity to eliminate sponsor ads)
   if (normDomain.includes('amazon')) {
-    return `https://www.amazon.com.mx/s?k=${encodedTerm}&ref=mercant`
+    if (cleanBrand) {
+      return `https://www.amazon.com.mx/s?k=${encodedQuery}&rh=p_89%3A${encodedBrand}&s=exact-aware-popularity-rank&ref=mercant`
+    }
+    return `https://www.amazon.com.mx/s?k=${encodedQuery}&s=exact-aware-popularity-rank&ref=mercant`
   }
 
   // MercadoLibre direct product listing
   if (normDomain.includes('mercadolibre')) {
-    const slug = encodeURIComponent((focusedTerm || queryText).replace(/\s+/g, '-'))
+    const slug = encodeURIComponent(cleanQuery.replace(/\s+/g, '-'))
     return `https://listado.mercadolibre.com.mx/${slug}?ref=mercant`
   }
 
-  // Dell direct store
+  // Dell direct store — search ONLY the clean model number so it shows the exact machine/part, never stands or cables
   if (normDomain.includes('dell.com')) {
-    if (modelClean) {
-      return `https://www.dell.com/es-mx/search/${encodeURIComponent(modelClean)}?ref=mercant`
-    }
-    return `https://www.dell.com/es-mx/search/${encodedTerm}?ref=mercant`
+    const dellTarget = cleanModel || cleanQuery
+    return `https://www.dell.com/es-mx/search/${encodeURIComponent(dellTarget)}?ref=mercant`
   }
 
   // CyberPuerta direct search
   if (normDomain.includes('cyberpuerta')) {
-    return `https://www.cyberpuerta.mx/index.php?cl=search&searchparam=${encodedTerm}&ref=mercant`
+    return `https://www.cyberpuerta.mx/index.php?cl=search&searchparam=${encodedModel}&ref=mercant`
   }
 
   // Lenovo direct store
   if (normDomain.includes('lenovo.com')) {
-    return `https://www.lenovo.com/mx/es/search?fq=&text=${encodedTerm}&ref=mercant`
+    return `https://www.lenovo.com/mx/es/search?fq=&text=${encodedModel}&ref=mercant`
   }
 
   // HP direct store
   if (normDomain.includes('hp.com')) {
-    return `https://www.hp.com/mx-es/shop/catalogsearch/result/?q=${encodedTerm}&ref=mercant`
+    return `https://www.hp.com/mx-es/shop/catalogsearch/result/?q=${encodedModel}&ref=mercant`
   }
 
   // Microsoft official store
   if (normDomain.includes('microsoft.com')) {
-    return `https://www.microsoft.com/es-mx/search/explore?q=${encodedTerm}&ref=mercant`
+    return `https://www.microsoft.com/es-mx/search/explore?q=${encodedModel}&ref=mercant`
   }
 
   // Syscom
   if (normDomain.includes('syscom.mx')) {
-    return `https://www.syscom.mx/principal/busqueda?q=${encodedTerm}&ref=mercant`
+    return `https://www.syscom.mx/principal/busqueda?q=${encodedModel}&ref=mercant`
   }
 
   // OfficeDepot
   if (normDomain.includes('officedepot')) {
-    return `https://www.officedepot.com.mx/officedepot/en/Buscar?text=${encodedTerm}&ref=mercant`
+    return `https://www.officedepot.com.mx/officedepot/en/Buscar?text=${encodedModel}&ref=mercant`
   }
 
   // Steren
   if (normDomain.includes('steren.com')) {
-    return `https://www.steren.com.mx/catalogsearch/result/?q=${encodedTerm}&ref=mercant`
+    return `https://www.steren.com.mx/catalogsearch/result/?q=${encodedModel}&ref=mercant`
+  }
+
+  // Truper
+  if (normDomain.includes('truper.com')) {
+    return `https://www.truper.com/buscar?q=${encodedModel}&ref=mercant`
+  }
+
+  // HomeDepot
+  if (normDomain.includes('homedepot.com.mx')) {
+    return `https://www.homedepot.com.mx/busqueda?q=${encodedModel}&ref=mercant`
   }
 
   // Default clean distributor URL
-  return `https://${domain.replace(/^https?:\/\//, '')}/search?q=${encodedTerm}&ref=mercant`
+  return `https://${domain.replace(/^https?:\/\//, '')}/search?q=${encodedModel}&ref=mercant`
 }

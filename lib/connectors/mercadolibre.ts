@@ -7,6 +7,7 @@
 
 import type { ProductQuery, RawOffer } from '@/types'
 import { BaseConnector, type ConnectorConfig } from './base'
+import { extractCleanProduct } from './cleanQuery'
 
 interface MlSeller {
   id: number
@@ -52,15 +53,11 @@ export class MercadoLibreConnector extends BaseConnector {
   }
 
   async search(query: ProductQuery): Promise<RawOffer[]> {
-    const searchTerms = [query.brand, query.name, query.model]
-      .filter(Boolean)
-      .join(' ')
-      .trim()
-
+    const { cleanQuery } = extractCleanProduct(query.name, query.brand, query.model)
     const limit = query.limit ?? DEFAULT_LIMIT
 
     const url = new URL(`${ML_API_BASE}/sites/${ML_SITE}/search`)
-    url.searchParams.set('q', searchTerms)
+    url.searchParams.set('q', cleanQuery)
     url.searchParams.set('limit', String(limit))
 
     let data: MlSearchResponse
@@ -97,7 +94,7 @@ export class MercadoLibreConnector extends BaseConnector {
       title: result.title,
       price: result.price,
       currency: result.currency_id || 'MXN',
-      sourceUrl: result.permalink,
+      sourceUrl: `${result.permalink}${result.permalink.includes('?') ? '&' : '?'}ref=mercant`,
       sourceName: 'MercadoLibre',
       imageUrl: result.thumbnail ?? null,
       thumbnailUrl: result.thumbnail ?? null,

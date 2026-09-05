@@ -8,6 +8,7 @@
 import * as cheerio from 'cheerio'
 import type { ProductQuery, RawOffer } from '@/types'
 import { BaseConnector, type ConnectorConfig } from './base'
+import { extractCleanProduct } from './cleanQuery'
 
 const USER_AGENTS = [
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
@@ -40,17 +41,11 @@ export class DirectWebScraperConnector extends BaseConnector {
 
 
   async search(query: ProductQuery): Promise<RawOffer[]> {
-    const searchTerms = [query.brand, query.name, query.model]
-      .filter(Boolean)
-      .join(' ')
-      .trim()
-
-
+    const { cleanQuery } = extractCleanProduct(query.name, query.brand, query.model)
     const offers: RawOffer[] = []
 
-
     try {
-      const encoded = encodeURIComponent(searchTerms)
+      const encoded = encodeURIComponent(cleanQuery)
       const googleShoppingUrl = 'https://www.google.com/search?tbm=shop&q=' + encoded + '&hl=es-419&gl=mx'
 
 
@@ -92,13 +87,15 @@ export class DirectWebScraperConnector extends BaseConnector {
 
 
           if (title && price && price > 0) {
+            const rawLink = cleanLink || 'https://www.google.com/search?tbm=shop&q=' + encoded
+            const directProductUrl = `${rawLink}${rawLink.includes('?') ? '&' : '?'}ref=mercant`
             offers.push(
               this.buildRawOffer({
                 id: 'direct_scrape_' + Date.now() + '_' + i,
                 title,
                 price,
                 currency: 'MXN',
-                sourceUrl: cleanLink || 'https://www.google.com/search?tbm=shop&q=' + encoded,
+                sourceUrl: directProductUrl,
                 sourceName: store || 'Google Shopping Store',
                 imageUrl: img,
                 thumbnailUrl: img,
