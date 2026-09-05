@@ -4,8 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "opennextjs-cloudflare build && node scripts/prepare-cloudflare.js",
-    "build:next": "next build",
+    "build": "next build",
     "build:cf": "opennextjs-cloudflare build && node scripts/prepare-cloudflare.js",
     "start": "next start",
     "lint": "eslint",
