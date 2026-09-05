@@ -18,4 +18,25 @@ if (fs.existsSync(workerSrc)) {
   console.log('Created .open-next/_worker.js')
 }
 
+// 3. Patch any unresolvable node:sqlite references in bundled files
+function patchFiles(dir) {
+  if (!fs.existsSync(dir)) return
+  const entries = fs.readdirSync(dir, { withFileTypes: true })
+  for (const entry of entries) {
+    const fullPath = path.join(dir, entry.name)
+    if (entry.isDirectory()) {
+      patchFiles(fullPath)
+    } else if (entry.name.endsWith('.js') || entry.name.endsWith('.mjs')) {
+      let content = fs.readFileSync(fullPath, 'utf8')
+      if (content.includes('node:sqlite')) {
+        content = content.replace(/require\(["']node:sqlite["']\)/g, '{}')
+        fs.writeFileSync(fullPath, content, 'utf8')
+        console.log('Patched node:sqlite in ' + entry.name)
+      }
+    }
+  }
+}
+
+patchFiles(openNextDir)
+
 console.log('Successfully prepared .open-next bundle for Cloudflare Pages!')
