@@ -16,48 +16,68 @@ const client = new OpenAI({
 
 const MODEL = process.env.NVIDIA_MODEL || 'moonshotai/kimi-k3'
 
-const SYSTEM_PROMPT = `You are a procurement assistant that extracts structured product items from freeform text.
-Return ONLY a valid JSON object:
+const SYSTEM_PROMPT = `You are an expert procurement and tender assistant (Licitaciones y Compras Gubernamentales/Corporativas).
+Your goal is to parse procurement requests, product lists, tenders (licitaciones), RFPs, or technical annexes into structured items.
+
+Return ONLY a valid JSON object matching this schema:
 {
+  "suggestedName": "Short descriptive procurement title (e.g., 'Licitación Equipamiento de Cómputo Q3')",
+  "suggestedBudget": 150000, // numerical amount if mentioned in document or null
   "items": [
     {
-      "name": "Full product title/description",
-      "brand": "Brand if mentioned (or null)",
-      "model": "Model if mentioned (or null)",
+      "name": "Full descriptive product title",
+      "brand": "Brand if mentioned (e.g., 'Dell', 'Lenovo', 'Cisco') or null",
+      "model": "Model / SKU / Part number if mentioned or null",
       "quantity": 1,
       "currency": "MXN",
-      "specifications": "Extra technical specs if mentioned"
+      "specifications": "Technical specs, dimensions, processors, RAM, warranty, etc."
     }
   ]
 }
 
 Rules:
-- Quantity defaults to 1 if not specified.
-- Support formats like "50 x laptops", "100 Dell P2422H", "200 sillas ergonómicas".
-- Default currency is "MXN" unless stated otherwise.
-- Never invent specs or brands that are not in the text.
-- Return ONLY JSON.`
+- Extract all requested items, equipment, software licenses, materials, or services.
+- Quantity defaults to 1 if not explicitly specified.
+- If quantity is specified (e.g. '50 pzas', '10 unidades', '2 lotes'), parse as positive integer.
+- Default currency is 'MXN' unless USD/EUR is explicitly stated.
+- Never invent brands or specifications that are not present in the text.
+- Return ONLY the JSON object, no markdown wrappers, no explanations.`
 
-export function heuristicParse(text: string): ProductQuery[] {
+export function heuristicParse(text: string): { items: ProductQuery[]; suggestedName?: string; suggestedBudget?: number | null } {
   const lines = text
     .split(/\r?\n/)
     .map((l) => l.trim())
     .filter((l) => l.length > 0 && !l.startsWith('#'))
 
   const items: ProductQuery[] = []
+  let suggestedName: string | undefined
+  let suggestedBudget: number | null = null
+
+  // Check for tender title or budget in initial lines
+  for (let i = 0; i < Math.min(lines.length, 10); i++) {
+    const l = lines[i]
+    if (/licitaci[oó]n|concurso|requerimiento|adquisici[oó]n|compra/i.test(l) && !suggestedName) {
+      suggestedName = l.replace(/^[-*•#\s]+/, '').slice(0, 80)
+    }
+    const budgetMatch = l.match(/(?:presupuesto|monto|techo|estimado|valor)\s*(?:m[aá]ximo|total)?:?\s*\$?\s*([\d,]+(?:\.\d+)?)/i)
+    if (budgetMatch && budgetMatch[1] && !suggestedBudget) {
+      const num = parseFloat(budgetMatch[1].replace(/,/g, ''))
+      if (!isNaN(num) && num > 0) suggestedBudget = num
+    }
+  }
 
   const isHeaderLine = (line: string): boolean => {
     const l = line.toLowerCase()
     return (
-      (l.includes('producto') || l.includes('artículo') || l.includes('item')) &&
+      (l.includes('producto') || l.includes('artículo') || l.includes('item') || l.includes('descripción')) &&
       (l.includes('cantidad') || l.includes('marca') || l.includes('modelo') || l.includes('specs') || l.includes('especificaciones'))
     )
   }
 
   for (let idx = 0; idx < lines.length; idx++) {
     const line = lines[idx]
-    if (isHeaderLine(line) || /^[-|\s:]+$/.test(line)) {
-      continue // Skip header or divider line
+    if (isHeaderLine(line) || /^[-|\s:=_]+$/.test(line) || /^--- Página \d+ ---$/.test(line)) {
+      continue // Skip header, page markers, or divider lines
     }
 
     // Check delimiter: pipe (|), tab (\t), or semicolon (;)
@@ -151,20 +171,25 @@ export function heuristicParse(text: string): ProductQuery[] {
       }
     }
 
-    // Natural language fallback
+    // Natural language / numbered lists fallback (e.g., "1. 50 computadoras Dell...")
     let qty = 1
-    let rest = line
+    let rest = line.replace(/^\d+[\.\)\-]\s*/, '') // Remove bullet/numbering
 
-    const matchQty = line.match(/^(\d+)\s*(?:x|\*|unidades de|piezas de)?\s*(.*)$/i)
+    const matchQty = rest.match(/^(\d+)\s*(?:x|\*|unidades(?: de)?|piezas(?: de)?|equipos(?: de)?|pzas\.?)?\s*(.*)$/i)
     if (matchQty && matchQty[1] && matchQty[2]) {
       qty = parseInt(matchQty[1], 10)
       rest = matchQty[2].trim()
     }
 
+    // Skip short non-product filler sentences
+    if (rest.length < 3 || /^(anexo|página|sección|requisito|nota)/i.test(rest)) {
+      continue
+    }
+
     const brands = [
       'Lenovo', 'Dell', 'HP', 'Logitech', 'Apple', 'Asus', 'Acer',
       'Samsung', 'LG', 'Herman Miller', 'Steelcase', 'Sony', 'TP-Link',
-      'Microsoft', 'APC', 'Cisco', 'Ubiquiti', 'Epson', 'Canon'
+      'Microsoft', 'APC', 'Cisco', 'Ubiquiti', 'Epson', 'Canon', 'Fortinet'
     ]
     let foundBrand: string | undefined
     for (const b of brands) {
@@ -184,7 +209,7 @@ export function heuristicParse(text: string): ProductQuery[] {
     })
   }
 
-  return items
+  return { items, suggestedName, suggestedBudget }
 }
 
 export async function parseProductList(text: string): Promise<ParsedProductList> {
@@ -193,26 +218,28 @@ export async function parseProductList(text: string): Promise<ParsedProductList>
   }
 
   const rawInput = text.trim()
-  const fallbackItems = heuristicParse(rawInput)
+  const { items: fallbackItems, suggestedName, suggestedBudget } = heuristicParse(rawInput)
 
   if (!process.env.NVIDIA_API_KEY) {
-    return { items: fallbackItems, rawInput }
+    return { items: fallbackItems, suggestedName, suggestedBudget, rawInput }
   }
 
   try {
-    // Race Kimi-k3 with a 1500ms timeout for ultra-fast instant UI responsiveness
+    const isLongDocument = rawInput.length > 500
+    const timeoutMs = isLongDocument ? 4500 : 2000
+
     const aiPromise = client.chat.completions.create({
       model: MODEL,
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: rawInput },
+        { role: 'user', content: rawInput.slice(0, 12000) },
       ],
       temperature: 0.1,
-      max_tokens: 800,
+      max_tokens: 3000,
     })
 
     const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('AI parsing timeout')), 1600)
+      setTimeout(() => reject(new Error('AI parsing timeout')), timeoutMs)
     )
 
     const completion = await Promise.race([aiPromise, timeoutPromise])
@@ -235,12 +262,18 @@ export async function parseProductList(text: string): Promise<ParsedProductList>
         currency: item.currency ?? 'MXN',
         specifications: item.specifications ?? undefined,
       }))
-      return { items, rawInput }
+
+      return {
+        items,
+        suggestedName: parsed.suggestedName || suggestedName,
+        suggestedBudget: parsed.suggestedBudget ?? suggestedBudget,
+        rawInput,
+      }
     }
 
-    return { items: fallbackItems, rawInput }
+    return { items: fallbackItems, suggestedName, suggestedBudget, rawInput }
   } catch (err) {
     console.warn('[AI Parser] Fast fallback to heuristic parser:', err)
-    return { items: fallbackItems, rawInput }
+    return { items: fallbackItems, suggestedName, suggestedBudget, rawInput }
   }
 }

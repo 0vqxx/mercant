@@ -232,6 +232,17 @@ export interface AlertResult {
 export interface ParsedProductList {
   /** Successfully parsed product queries */
   items: ProductQuery[]
+  /** Optional tender title or procurement name inferred from document */
+  suggestedName?: string
+  /** Optional estimated budget found in document */
+  suggestedBudget?: number | null
+  /** Optional tender metadata */
+  tenderDetails?: {
+    title?: string
+    entity?: string
+    deadline?: string
+    totalItemsCount?: number
+  }
   /** Descriptions of lines/items that could not be parsed */
   parseErrors?: string[]
   /** Original raw text that was submitted for parsing */

@@ -1,11 +1,12 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { PriorityModeSelector } from '@/components/procurement/PriorityModeSelector'
+import { extractTextFromFile } from '@/lib/pdf/extractPdfText'
 import type { ProductQuery, PriorityMode } from '@/types'
 import {
   Sparkles,
@@ -16,6 +17,11 @@ import {
   Search,
   CheckCircle2,
   Layers,
+  FileUp,
+  FileText,
+  UploadCloud,
+  Loader2,
+  FileSpreadsheet,
 } from 'lucide-react'
 
 const DEFAULT_SAMPLE_TEXT = `Computadora de escritorio | Dell | OptiPlex 7020 | 50 | Intel Core i5, 16 GB RAM, SSD 512 GB, Windows 11 Pro
@@ -33,10 +39,17 @@ Cableado de red | — | Cat6 | 1 | Instalación y configuración para 50 equipos
 
 export default function NewProcurementPage() {
   const router = useRouter()
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [step, setStep] = useState<1 | 2>(1)
   const [rawText, setRawText] = useState('')
   const [isParsing, setIsParsing] = useState(false)
   const [parseError, setParseError] = useState<string | null>(null)
+
+  // PDF and Document Upload state
+  const [activeInputTab, setActiveInputTab] = useState<'pdf' | 'text'>('pdf')
+  const [isDragging, setIsDragging] = useState(false)
+  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null)
+  const [pdfStatusMessage, setPdfStatusMessage] = useState<string | null>(null)
 
   // Procurement metadata
   const [procurementName, setProcurementName] = useState('')
@@ -47,6 +60,68 @@ export default function NewProcurementPage() {
   // Structured products
   const [items, setItems] = useState<ProductQuery[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const processFile = async (file: File) => {
+    if (!file) return
+    setParseError(null)
+    setIsParsing(true)
+    setUploadedFileName(file.name)
+    setPdfStatusMessage(`Leyendo archivo "${file.name}" y extrayendo contenido...`)
+
+    try {
+      // 1. Extract text from PDF / Document in browser
+      const extractedText = await extractTextFromFile(file)
+      if (!extractedText || extractedText.trim().length < 5) {
+        throw new Error('El documento no contiene texto legible. Asegúrate de que no sea una imagen escaneada.')
+      }
+
+      setRawText(extractedText)
+      setPdfStatusMessage(`Analizando licitación con IA y extrayendo requerimientos y cantidades...`)
+
+      // 2. Parse extracted text with AI
+      const res = await fetch('/api/parse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: extractedText }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Error al analizar el contenido de la licitación')
+
+      if (data.items && data.items.length > 0) {
+        setItems(data.items)
+        if (data.suggestedName && !procurementName) {
+          setProcurementName(data.suggestedName)
+        }
+        if (data.suggestedBudget && !budget) {
+          setBudget(String(data.suggestedBudget))
+        }
+        setPdfStatusMessage(null)
+        setStep(2)
+      } else {
+        setParseError('No se encontraron artículos o requerimientos en el documento. Revisa el archivo o introduce el texto manualmente.')
+      }
+    } catch (err: any) {
+      setParseError(err.message || 'Error al procesar el archivo PDF')
+    } finally {
+      setIsParsing(false)
+      setPdfStatusMessage(null)
+    }
+  }
+
+  const handleFileDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    setIsDragging(false)
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      processFile(e.dataTransfer.files[0])
+    }
+  }
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      processFile(e.target.files[0])
+    }
+  }
 
   const handleParseWithAI = async () => {
     if (!rawText.trim()) return
@@ -65,6 +140,12 @@ export default function NewProcurementPage() {
 
       if (data.items && data.items.length > 0) {
         setItems(data.items)
+        if (data.suggestedName && !procurementName) {
+          setProcurementName(data.suggestedName)
+        }
+        if (data.suggestedBudget && !budget) {
+          setBudget(String(data.suggestedBudget))
+        }
         setStep(2)
       } else {
         setParseError('No se identificaron productos válidos. Revisa el formato de entrada.')
@@ -288,38 +369,185 @@ export default function NewProcurementPage() {
 
           <div className="p-5 rounded-lg border border-[#e3e8ee] dark:border-[#232a38] bg-white dark:bg-[#151a24] shadow-[0px_1px_1px_rgba(0,0,0,0.03)] space-y-4">
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-semibold text-[#0a2540] dark:text-white">
-                  2. Lista de productos a cotizar
-                </label>
-                {rawText ? (
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#0a2540] dark:text-white">
+                    2. Entrada de Requerimientos & Licitación
+                  </label>
+                  <p className="text-xs text-[#697386] dark:text-[#8792a2] mt-0.5">
+                    Puedes subir un archivo PDF de licitación oficial o pegar tu lista en texto libre.
+                  </p>
+                </div>
+
+                {/* Sub-tabs for input mode */}
+                <div className="inline-flex rounded-lg p-1 bg-[#f4f6f8] dark:bg-[#1a2130] border border-[#e3e8ee] dark:border-[#232a38] self-start sm:self-auto">
                   <button
                     type="button"
-                    onClick={() => setRawText('')}
-                    className="text-[11px] font-semibold text-[#697386] hover:text-[#df1b41] dark:hover:text-[#ff6b6b] transition-colors cursor-pointer"
+                    onClick={() => setActiveInputTab('pdf')}
+                    className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+                      activeInputTab === 'pdf'
+                        ? 'bg-white dark:bg-[#0c1018] text-[#635bff] dark:text-[#7a73ff] shadow-xs'
+                        : 'text-[#697386] hover:text-[#0a2540] dark:hover:text-white'
+                    }`}
                   >
-                    Limpiar texto
+                    <FileUp className="w-3.5 h-3.5" />
+                    <span>Subir PDF / Archivo</span>
                   </button>
-                ) : (
                   <button
                     type="button"
-                    onClick={() => setRawText(DEFAULT_SAMPLE_TEXT)}
-                    className="text-[11px] font-semibold text-[#635bff] dark:text-[#7a73ff] hover:underline cursor-pointer"
+                    onClick={() => setActiveInputTab('text')}
+                    className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+                      activeInputTab === 'text'
+                        ? 'bg-white dark:bg-[#0c1018] text-[#635bff] dark:text-[#7a73ff] shadow-xs'
+                        : 'text-[#697386] hover:text-[#0a2540] dark:hover:text-white'
+                    }`}
                   >
-                    Cargar ejemplo
+                    <FileText className="w-3.5 h-3.5" />
+                    <span>Pegar texto / Tabla</span>
                   </button>
-                )}
+                </div>
               </div>
-              <p className="text-xs text-[#697386] dark:text-[#8792a2] mb-3">
-                Introduce líneas con cantidades, marcas o descripciones. El procesador extraerá los artículos automáticamente.
-              </p>
-              <Textarea
-                rows={7}
-                value={rawText}
-                onChange={(e) => setRawText(e.target.value)}
-                placeholder="Ej:&#10;50 laptops Lenovo ThinkPad E14&#10;100 x Logitech MX Master 3S&#10;200 sillas ergonómicas negras&#10;30 monitores 24&quot;"
-                className="font-mono text-xs leading-relaxed p-3 bg-[#f8fafc] dark:bg-[#1a2130] border-[#e3e8ee] dark:border-[#232a38] rounded-md focus:border-[#635bff]"
+
+              {/* Hidden file input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.txt,.csv,.tsv,.json,.md,application/pdf,text/*"
+                onChange={handleFileInputChange}
+                className="hidden"
               />
+
+              {/* TAB 1: PDF & Document Upload Dropzone */}
+              {activeInputTab === 'pdf' && (
+                <div className="space-y-3">
+                  <div
+                    onDragOver={(e) => {
+                      e.preventDefault()
+                      setIsDragging(true)
+                    }}
+                    onDragLeave={() => setIsDragging(false)}
+                    onDrop={handleFileDrop}
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-all cursor-pointer group ${
+                      isDragging
+                        ? 'border-[#635bff] bg-[#f0f5ff] dark:bg-[#635bff]/10'
+                        : isParsing
+                        ? 'border-[#635bff]/40 bg-[#f8fafc] dark:bg-[#1a2130]/50 opacity-90'
+                        : 'border-[#d8dee4] dark:border-[#2e3748] hover:border-[#635bff] dark:hover:border-[#7a73ff] bg-[#f8fafc]/50 dark:bg-[#121826]/50 hover:bg-[#f8fafc] dark:hover:bg-[#121826]'
+                    }`}
+                  >
+                    {isParsing ? (
+                      <div className="space-y-3 py-4">
+                        <div className="w-12 h-12 mx-auto rounded-full bg-[#f0f5ff] dark:bg-[#635bff]/20 flex items-center justify-center text-[#635bff] animate-pulse">
+                          <Loader2 className="w-6 h-6 animate-spin" />
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-xs font-bold text-[#0a2540] dark:text-white">
+                            {pdfStatusMessage || 'Extrayendo datos de la licitación con IA...'}
+                          </p>
+                          <p className="text-[11px] text-[#697386] dark:text-[#8792a2]">
+                            Esto tomará solo unos segundos. Identificando marcas, modelos, cantidades y fichas técnicas.
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="w-12 h-12 mx-auto rounded-full bg-[#f0f5ff] dark:bg-[#1e2430] group-hover:bg-[#e0eaff] dark:group-hover:bg-[#635bff]/20 flex items-center justify-center text-[#635bff] dark:text-[#7a73ff] transition-colors">
+                          <UploadCloud className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-[#0a2540] dark:text-white">
+                            Arrastra y suelta tu archivo PDF de licitación o pliego petitorio
+                          </p>
+                          <p className="text-[11px] text-[#697386] dark:text-[#8792a2] mt-0.5">
+                            Soporta documentos PDF oficiales, bases de concurso, anexos técnicos, TXT y CSV
+                          </p>
+                        </div>
+                        <div className="pt-1">
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            className="pointer-events-none text-xs gap-1.5 font-semibold"
+                          >
+                            <FileUp className="w-3.5 h-3.5 text-[#635bff]" />
+                            <span>Seleccionar archivo desde tu equipo</span>
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {uploadedFileName && (
+                    <div className="flex items-center justify-between p-2.5 rounded-md bg-[#f4f6f8] dark:bg-[#1a2130] border border-[#e3e8ee] dark:border-[#232a38] text-xs">
+                      <div className="flex items-center gap-2 text-[#0a2540] dark:text-white font-medium">
+                        <FileText className="w-4 h-4 text-[#635bff]" />
+                        <span className="truncate max-w-[280px] sm:max-w-md">{uploadedFileName}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          fileInputRef.current?.click()
+                        }}
+                        className="text-[11px] text-[#635bff] dark:text-[#7a73ff] font-semibold hover:underline cursor-pointer"
+                      >
+                        Cambiar archivo
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* TAB 2: Freeform / Table Text Input */}
+              {activeInputTab === 'text' && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-[#697386] dark:text-[#8792a2]">
+                      Introduce líneas con cantidades, marcas o descripciones:
+                    </span>
+                    {rawText ? (
+                      <button
+                        type="button"
+                        onClick={() => setRawText('')}
+                        className="text-[11px] font-semibold text-[#697386] hover:text-[#df1b41] dark:hover:text-[#ff6b6b] transition-colors cursor-pointer"
+                      >
+                        Limpiar texto
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setRawText(DEFAULT_SAMPLE_TEXT)}
+                        className="text-[11px] font-semibold text-[#635bff] dark:text-[#7a73ff] hover:underline cursor-pointer"
+                      >
+                        Cargar ejemplo
+                      </button>
+                    )}
+                  </div>
+                  <Textarea
+                    rows={7}
+                    value={rawText}
+                    onChange={(e) => setRawText(e.target.value)}
+                    placeholder="Ej:&#10;50 laptops Lenovo ThinkPad E14&#10;100 x Logitech MX Master 3S&#10;200 sillas ergonómicas negras&#10;30 monitores 24&quot;"
+                    className="font-mono text-xs leading-relaxed p-3 bg-[#f8fafc] dark:bg-[#1a2130] border-[#e3e8ee] dark:border-[#232a38] rounded-md focus:border-[#635bff]"
+                  />
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+                    <span className="text-[11px] text-[#697386] dark:text-[#8792a2]">
+                      Procesamiento instantáneo con catálogo mexicano e internacional
+                    </span>
+                    <Button
+                      type="button"
+                      onClick={handleParseWithAI}
+                      isLoading={isParsing}
+                      disabled={!rawText.trim()}
+                      className="gap-2 text-xs font-semibold"
+                    >
+                      <span>Procesar y estructurar</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {parseError && (
@@ -328,22 +556,6 @@ export default function NewProcurementPage() {
                 <span>{parseError}</span>
               </div>
             )}
-
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-[#f4f6f8] dark:border-[#1e2430]">
-              <span className="text-[11px] text-[#697386] dark:text-[#8792a2]">
-                Procesamiento instantáneo con catálogo mexicano e internacional
-              </span>
-              <Button
-                type="button"
-                onClick={handleParseWithAI}
-                isLoading={isParsing}
-                disabled={!rawText.trim()}
-                className="gap-2 text-xs font-semibold"
-              >
-                <span>Procesar y estructurar</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Button>
-            </div>
           </div>
         </div>
       )}
